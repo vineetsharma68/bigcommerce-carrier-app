@@ -48,6 +48,33 @@ app.post("/api/uninstall", (req, res) => {
   res.send("❌ App uninstalled, cleanup done.");
 });
 
+// /api/rates endpoint
+app.post("/api/rates", (req, res) => {
+  const { origin, destination, items } = req.body;
+
+  console.log("Rate request received:", { origin, destination, items });
+
+  // Dummy shipping rates (yahan aap MyRover.io API call kar sakte hain)
+  const rates = [
+    {
+      carrier_quote: {
+        code: "standard",
+        display_name: "Standard Shipping",
+        cost: 10.5
+      }
+    },
+    {
+      carrier_quote: {
+        code: "express",
+        display_name: "Express Shipping",
+        cost: 25.0
+      }
+    }
+  ];
+
+  res.json({ data: rates });
+});
+
 // Check Connection
 app.get("/api/check", (req, res) => {
   res.json({ success: true, message: "Carrier service connection OK ✅" });
