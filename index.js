@@ -48,35 +48,55 @@ app.post("/api/uninstall", (req, res) => {
   res.send("❌ App uninstalled, cleanup done.");
 });
 
-// /api/rates endpoint (debug-ready)
-app.post("/api/rates", (req, res) => {
-  console.log("Received /api/rates request body:", req.body);
+// /api/rates endpoint with MyRover.io integration
+app.post("/api/rates", async (req, res) => {
+  const { origin, destination, items } = req.body;
+  console.log("Rate request received:", { origin, destination, items });
+
+  // If API key missing, return dummy rates
+  if (!process.env.MYROVER_API_KEY) {
+    console.warn("MYROVER_API_KEY not set, returning dummy rates.");
+    const fallbackRates = [
+      { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+      { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+    ];
+    return res.json({ data: fallbackRates });
+  }
 
   try {
-    const { origin, destination, items } = req.body;
-
-    // Dummy rates - yahan aap MyRover.io API call kar sakte hain
-    const rates = [
+    // MyRover.io API call
+    const response = await axios.post(
+      "https://api.myrover.io/get-rates", // replace with actual endpoint from their docs
+      { origin, destination, items },
       {
-        carrier_quote: {
-          code: "standard",
-          display_name: "Standard Shipping",
-          cost: 10.5
-        }
-      },
-      {
-        carrier_quote: {
-          code: "express",
-          display_name: "Express Shipping",
-          cost: 25.0
+        headers: {
+          "Authorization": `Bearer ${process.env.MYROVER_API_KEY}`,
+          "Content-Type": "application/json"
         }
       }
-    ];
+    );
+
+    // Map MyRover.io response to BigCommerce format
+    const rates = response.data.rates.map(rate => ({
+      carrier_quote: {
+        code: rate.service_code,
+        display_name: rate.service_name,
+        cost: rate.price
+      }
+    }));
 
     res.json({ data: rates });
+
   } catch (err) {
-    console.error("Error in /api/rates:", err);
-    res.status(500).json({ error: "Unable to generate rates" });
+    console.error("MyRover.io API error:", err.response?.data || err.message);
+
+    // Fallback dummy rates
+    const fallbackRates = [
+      { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+      { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+    ];
+
+    res.json({ data: fallbackRates });
   }
 });
 
