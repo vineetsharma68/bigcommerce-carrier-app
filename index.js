@@ -48,31 +48,36 @@ app.post("/api/uninstall", (req, res) => {
   res.send("❌ App uninstalled, cleanup done.");
 });
 
-// /api/rates endpoint
+// /api/rates endpoint (debug-ready)
 app.post("/api/rates", (req, res) => {
-  const { origin, destination, items } = req.body;
+  console.log("Received /api/rates request body:", req.body);
 
-  console.log("Rate request received:", { origin, destination, items });
+  try {
+    const { origin, destination, items } = req.body;
 
-  // Dummy shipping rates (yahan aap MyRover.io API call kar sakte hain)
-  const rates = [
-    {
-      carrier_quote: {
-        code: "standard",
-        display_name: "Standard Shipping",
-        cost: 10.5
+    // Dummy rates - yahan aap MyRover.io API call kar sakte hain
+    const rates = [
+      {
+        carrier_quote: {
+          code: "standard",
+          display_name: "Standard Shipping",
+          cost: 10.5
+        }
+      },
+      {
+        carrier_quote: {
+          code: "express",
+          display_name: "Express Shipping",
+          cost: 25.0
+        }
       }
-    },
-    {
-      carrier_quote: {
-        code: "express",
-        display_name: "Express Shipping",
-        cost: 25.0
-      }
-    }
-  ];
+    ];
 
-  res.json({ data: rates });
+    res.json({ data: rates });
+  } catch (err) {
+    console.error("Error in /api/rates:", err);
+    res.status(500).json({ error: "Unable to generate rates" });
+  }
 });
 
 // Check Connection
@@ -83,4 +88,3 @@ app.get("/api/check", (req, res) => {
 // Start server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
