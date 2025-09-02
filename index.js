@@ -77,6 +77,8 @@ app.post("/api/rates", async (req, res) => {
     );
 
     console.log("MyRover.io response:", response.data);
+    console.log("Using MyRover.io API Key:", process.env.MYROVER_API_KEY);
+
 
     // Safe mapping
     const ratesArray = response.data?.rates || []; // handle undefined
