@@ -66,7 +66,7 @@ app.post("/api/rates", async (req, res) => {
   try {
     // MyRover.io API call
     const response = await axios.post(
-      "https://apis.myrover.io/GetPrice", // replace with actual endpoint from their docs
+      "https://apis.myrover.io/GetPrice", // replace with actual endpoint from docs
       { origin, destination, items },
       {
         headers: {
@@ -76,29 +76,41 @@ app.post("/api/rates", async (req, res) => {
       }
     );
 
-    // Map MyRover.io response to BigCommerce format
-    const rates = response.data.rates.map(rate => ({
+    console.log("MyRover.io response:", response.data);
+
+    // Safe mapping
+    const ratesArray = response.data?.rates || []; // handle undefined
+    let rates = ratesArray.map(rate => ({
       carrier_quote: {
-        code: rate.service_code,
-        display_name: rate.service_name,
-        cost: rate.price
+        code: rate.service_code || rate.code || "standard",
+        display_name: rate.service_name || rate.name || "Standard Shipping",
+        cost: rate.price || 10.5
       }
     }));
+
+    // fallback if empty
+    if (rates.length === 0) {
+      rates = [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ];
+    }
 
     res.json({ data: rates });
 
   } catch (err) {
     console.error("MyRover.io API error:", err.response?.data || err.message);
 
-    // Fallback dummy rates
-    const fallbackRates = [
-      { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-      { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-    ];
-
-    res.json({ data: fallbackRates });
+    // fallback dummy rates
+    res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ]
+    });
   }
 });
+
 
 // Check Connection
 app.get("/api/check", (req, res) => {
