@@ -66,7 +66,7 @@ app.post("/api/rates", async (req, res) => {
   try {
     // MyRover.io API call
     const response = await axios.post(
-      "https://api.myrover.io/get-rates", // replace with actual endpoint from their docs
+      "https://apis.myrover.io/GetPrice", // replace with actual endpoint from their docs
       { origin, destination, items },
       {
         headers: {
