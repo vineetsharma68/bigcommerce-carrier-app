@@ -139,7 +139,8 @@ app.get("/api/test-myrover", async (req, res) => {
       },
       {
         headers: {
-          "Authorization": `Bearer ${process.env.MYROVER_API_KEY}`,
+          //"Authorization": `Bearer ${process.env.MYROVER_API_KEY}`,
+          "Authorization": process.env.MYROVER_API_KEY,
           "Content-Type": "application/json"
         }
       }
