@@ -122,3 +122,67 @@ app.get("/api/check", (req, res) => {
 // Start server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+// 🔹 MyRover.io API Key test endpoint
+app.get("/api/test-myrover", async (req, res) => {
+  try {
+    console.log("🔍 Testing MyRover.io API Key:", process.env.MYROVER_API_KEY);
+
+    // First attempt: Bearer style
+    let response = await axios.post(
+      "https://apis.myrover.io/GetPrice",
+      {
+        origin: { postal_code: "L6H7T7", country_code: "CA" },
+        destination: { postal_code: "M4B1B3", country_code: "CA" },
+        items: [{ quantity: 1, weight: { value: 1, units: "kg" } }]
+      },
+      {
+        headers: {
+          "Authorization": `Bearer ${process.env.MYROVER_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    return res.json({
+      success: true,
+      mode: "Bearer",
+      data: response.data
+    });
+
+  } catch (err) {
+    console.error("❌ Bearer mode failed:", err.response?.data || err.message);
+
+    // Retry without Bearer
+    try {
+      let retry = await axios.post(
+        "https://apis.myrover.io/GetPrice",
+        {
+          origin: { postal_code: "L6H7T7", country_code: "CA" },
+          destination: { postal_code: "M4B1B3", country_code: "CA" },
+          items: [{ quantity: 1, weight: { value: 1, units: "kg" } }]
+        },
+        {
+          headers: {
+            "Authorization": process.env.MYROVER_API_KEY,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      return res.json({
+        success: true,
+        mode: "No Bearer",
+        data: retry.data
+      });
+    } catch (retryErr) {
+      console.error("❌ Retry (No Bearer) also failed:", retryErr.response?.data || retryErr.message);
+      return res.status(401).json({
+        success: false,
+        error: retryErr.response?.data || retryErr.message
+      });
+    }
+  }
+});
+
