@@ -187,3 +187,18 @@ app.get("/api/test-myrover", async (req, res) => {
   }
 });
 
+
+
+import axios from "axios";
+
+app.get("/api/myip", async (req, res) => {
+  try {
+    const ipResponse = await axios.get("https://api.ipify.org?format=json");
+    console.log("Public IP Address:", ipResponse.data.ip);
+    res.json({ success: true, ip: ipResponse.data.ip });
+  } catch (err) {
+    console.error("Failed to get IP:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
