@@ -6,12 +6,12 @@ const axios = require("axios");
 const app = express();
 app.use(bodyParser.json());
 
-// Home route
+// 🏠 Home route
 app.get("/", (req, res) => {
   res.send("Hello from BigCommerce Carrier App!");
 });
 
-// Auth Callback
+// 🔐 Auth Callback
 app.get("/api/auth", async (req, res) => {
   const { code, scope, context } = req.query;
   if (!code) return res.status(400).send("Missing OAuth code");
@@ -37,36 +37,35 @@ app.get("/api/auth", async (req, res) => {
   }
 });
 
-// Load Callback
+// 📦 Load Callback
 app.get("/api/load", (req, res) => {
   res.send("🚀 App loaded inside BigCommerce Control Panel!");
 });
 
-// Uninstall Callback
+// ❌ Uninstall Callback
 app.post("/api/uninstall", (req, res) => {
   console.log("Uninstall request received:", req.body);
   res.send("❌ App uninstalled, cleanup done.");
 });
 
-// /api/rates endpoint with MyRover.io integration
+// 🧠 MyRover.io Rate Calculation
 app.post("/api/rates", async (req, res) => {
   const { origin, destination, items } = req.body;
   console.log("Rate request received:", { origin, destination, items });
 
-  // If API key missing, return dummy rates
   if (!process.env.MYROVER_API_KEY) {
     console.warn("MYROVER_API_KEY not set, returning dummy rates.");
-    const fallbackRates = [
-      { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-      { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-    ];
-    return res.json({ data: fallbackRates });
+    return res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ]
+    });
   }
 
   try {
-    // MyRover.io API call
     const response = await axios.post(
-      "https://apis.myrover.io/GetPrice", // replace with actual endpoint from docs
+      "https://apis.myrover.io/GetPrice",
       { origin, destination, items },
       {
         headers: {
@@ -79,9 +78,7 @@ app.post("/api/rates", async (req, res) => {
     console.log("MyRover.io response:", response.data);
     console.log("Using MyRover.io API Key:", process.env.MYROVER_API_KEY);
 
-
-    // Safe mapping
-    const ratesArray = response.data?.rates || []; // handle undefined
+    const ratesArray = response.data?.rates || [];
     let rates = ratesArray.map(rate => ({
       carrier_quote: {
         code: rate.service_code || rate.code || "standard",
@@ -90,7 +87,6 @@ app.post("/api/rates", async (req, res) => {
       }
     }));
 
-    // fallback if empty
     if (rates.length === 0) {
       rates = [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
@@ -102,8 +98,6 @@ app.post("/api/rates", async (req, res) => {
 
   } catch (err) {
     console.error("MyRover.io API error:", err.response?.data || err.message);
-
-    // fallback dummy rates
     res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
@@ -113,38 +107,30 @@ app.post("/api/rates", async (req, res) => {
   }
 });
 
-
-// Check Connection
+// ✅ Connection Check
 app.get("/api/check", (req, res) => {
   res.json({ success: true, message: "Carrier service connection OK ✅" });
 });
 
-// Start server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-// 🔹 MyRover.io API Key test endpoint
+// ✅ MyRover.io API Key Test Endpoint
 app.get("/api/test-myrover", async (req, res) => {
   try {
     console.log("🔍 Testing MyRover.io API Key:", process.env.MYROVER_API_KEY);
 
-    // First attempt: Bearer style
     const response = await axios.post(
-  "https://apis.myrover.io/GetPrice",
-  {
-    origin: { postal_code: "L6H7T7", country_code: "CA" },
-    destination: { postal_code: "M4B1B3", country_code: "CA" },
-    items: [{ quantity: 1, weight: { value: 1, units: "kg" } }]
-  },
-  {
-    headers: {
-      "X-API-Key": process.env.MYROVER_API_KEY,
-      "Content-Type": "application/json"
-    }
-  }
-);
-
+      "https://apis.myrover.io/GetPrice",
+      {
+        origin: { postal_code: "L6H7T7", country_code: "CA" },
+        destination: { postal_code: "M4B1B3", country_code: "CA" },
+        items: [{ quantity: 1, weight: { value: 1, units: "kg" } }]
+      },
+      {
+        headers: {
+          "X-API-Key": process.env.MYROVER_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
     return res.json({
       success: true,
@@ -155,7 +141,6 @@ app.get("/api/test-myrover", async (req, res) => {
   } catch (err) {
     console.error("❌ Bearer mode failed:", err.response?.data || err.message);
 
-    // Retry without Bearer
     try {
       let retry = await axios.post(
         "https://apis.myrover.io/GetPrice",
@@ -187,10 +172,7 @@ app.get("/api/test-myrover", async (req, res) => {
   }
 });
 
-
-
-import axios from "axios";
-
+// 🌐 New Route to get Render Server Public IP
 app.get("/api/myip", async (req, res) => {
   try {
     const ipResponse = await axios.get("https://api.ipify.org?format=json");
@@ -202,3 +184,6 @@ app.get("/api/myip", async (req, res) => {
   }
 });
 
+// 🚀 Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
