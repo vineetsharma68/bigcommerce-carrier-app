@@ -337,6 +337,40 @@ app.get("/api/check-enabled-services", async (req, res) => {
 });
 
 
+// 🔹 Check Enabled MyRover Services
+app.get("/api/check-enabled-services", async (req, res) => {
+  try {
+    console.log("🧪 Fetching enabled services from MyRover...");
+
+    const response = await axios.get("https://apis.myrover.io/GetServices", {
+      headers: {
+        "Authorization": process.env.MYROVER_API_KEY,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const services = response.data?.services || [];
+
+    console.log("✅ Enabled Services:", services);
+
+    res.json({
+      success: true,
+      message: "Enabled services fetched successfully ✅",
+      total: services.length,
+      services
+    });
+
+  } catch (error) {
+    console.error("❌ Error fetching enabled services:", error.response?.data || error.message);
+
+    res.status(400).json({
+      success: false,
+      message: "Failed to fetch enabled services ❌",
+      error: error.response?.data || error.message
+    });
+  }
+});
+
 
 
 // 🌐 New Route to get Render Server Public IP
