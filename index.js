@@ -49,12 +49,14 @@ app.post("/api/uninstall", (req, res) => {
 });
 
 // 🧠 MyRover.io Rate Calculation
+// /api/rates endpoint with MyRover.io integration (Final version)
 app.post("/api/rates", async (req, res) => {
   const { origin, destination, items } = req.body;
-  console.log("Rate request received:", { origin, destination, items });
+  console.log("📦 Rate request received:", { origin, destination, items });
 
+  // Dummy fallback if key missing
   if (!process.env.MYROVER_API_KEY) {
-    console.warn("MYROVER_API_KEY not set, returning dummy rates.");
+    console.warn("⚠️ MYROVER_API_KEY not set, returning dummy rates.");
     return res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
@@ -64,20 +66,22 @@ app.post("/api/rates", async (req, res) => {
   }
 
   try {
+    // ✅ MyRover API Request (correct authorization header)
     const response = await axios.post(
       "https://apis.myrover.io/GetPrice",
       { origin, destination, items },
       {
         headers: {
-          "Authorization": `Bearer ${process.env.MYROVER_API_KEY}`,
+          "Authorization": process.env.MYROVER_API_KEY, // <--- Correct format
           "Content-Type": "application/json"
-        }
+        },
+        timeout: 10000
       }
     );
 
-    console.log("MyRover.io response:", response.data);
-    console.log("Using MyRover.io API Key:", process.env.MYROVER_API_KEY);
+    console.log("✅ MyRover.io response:", response.data);
 
+    // ✅ Handle response safely
     const ratesArray = response.data?.rates || [];
     let rates = ratesArray.map(rate => ({
       carrier_quote: {
@@ -88,17 +92,18 @@ app.post("/api/rates", async (req, res) => {
     }));
 
     if (rates.length === 0) {
+      console.warn("⚠️ No rates returned from MyRover, sending fallback rates.");
       rates = [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
         { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
       ];
     }
 
-    res.json({ data: rates });
+    return res.json({ data: rates });
 
   } catch (err) {
-    console.error("MyRover.io API error:", err.response?.data || err.message);
-    res.json({
+    console.error("❌ MyRover.io API error:", err.response?.data || err.message);
+    return res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
         { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
