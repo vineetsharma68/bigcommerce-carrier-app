@@ -218,7 +218,7 @@ app.get("/api/test-rates", async (req, res) => {
       items: [
         { quantity: 1, weight: { value: 2, units: "kg" } }
       ],
-      service_type: "FRS" // ✅ You can try "FRS", "LS", "MS", etc.
+      service_type: "HS" // ✅ You can try "FRS", "LS", "MS", etc.
     };
 
     const response = await axios.post(
