@@ -178,6 +178,39 @@ app.get("/api/test-myrover", async (req, res) => {
   }
 });
 
+// 🔹 MyRover.io - Fetch Available Service Types
+app.get("/api/myrover-services", async (req, res) => {
+  try {
+    console.log("🔍 Fetching available MyRover service types...");
+
+    const response = await axios.post(
+      "https://apis.myrover.io/GetServices",
+      {},
+      {
+        headers: {
+          "Authorization": process.env.MYROVER_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log("✅ MyRover Services Response:", response.data);
+    res.json({
+      success: true,
+      data: response.data
+    });
+
+  } catch (err) {
+    console.error("❌ Failed to fetch MyRover services:", err.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      error: err.response?.data || err.message
+    });
+  }
+});
+
+
+
 // 🌐 New Route to get Render Server Public IP
 app.get("/api/myip", async (req, res) => {
   try {
