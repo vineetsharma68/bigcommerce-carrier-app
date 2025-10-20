@@ -252,6 +252,67 @@ app.get("/api/test-rates", async (req, res) => {
 });
 
 
+// 🔹 Auto Tester for all MyRover services
+app.get("/api/test-all-services", async (req, res) => {
+  const services = [
+    "FRS", "FRSH", "LS", "LR", "LD", "MS", "MR", "MD", "MPS",
+    "HS", "HR", "HD", "OS", "OR", "OD", "CW", "TD"
+  ];
+
+  const results = [];
+
+  for (const service of services) {
+    try {
+      console.log(`🧪 Testing Service: ${service}`);
+
+      const payload = {
+        origin: { postal_code: "L6H7T7", country_code: "CA" },
+        destination: { postal_code: "M4B1B3", country_code: "CA" },
+        items: [
+          { quantity: 1, weight: { value: 2, units: "kg" } }
+        ],
+        service_type: service
+      };
+
+      const response = await axios.post(
+        "https://apis.myrover.io/GetPrice",
+        payload,
+        {
+          headers: {
+            "Authorization": process.env.MYROVER_API_KEY,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      // if success
+      results.push({
+        service,
+        status: "✅ Working",
+        price: response.data?.price || "N/A",
+        raw: response.data
+      });
+
+    } catch (err) {
+      results.push({
+        service,
+        status: "❌ Failed",
+        error: err.response?.data || err.message
+      });
+    }
+  }
+
+  console.log("🔍 Test Summary:", results);
+
+  res.json({
+    success: true,
+    message: "MyRover Service Type Test Completed",
+    total: services.length,
+    results
+  });
+});
+
+
 // 🌐 New Route to get Render Server Public IP
 app.get("/api/myip", async (req, res) => {
   try {
