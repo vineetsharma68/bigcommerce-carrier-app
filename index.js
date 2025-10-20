@@ -313,6 +313,32 @@ app.get("/api/test-all-services", async (req, res) => {
 });
 
 
+app.get("/api/check-enabled-services", async (req, res) => {
+  try {
+    const response = await axios.get("https://apis.myrover.io/GetServices", {
+      headers: {
+        "Authorization": process.env.MYROVER_API_KEY,
+        "Content-Type": "application/json"
+      }
+    });
+
+    res.json({
+      success: true,
+      message: "Enabled services fetched successfully",
+      data: response.data
+    });
+
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+
+
+
 // 🌐 New Route to get Render Server Public IP
 app.get("/api/myip", async (req, res) => {
   try {
