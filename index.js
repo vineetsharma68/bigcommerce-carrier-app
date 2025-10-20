@@ -49,82 +49,74 @@ app.post("/api/uninstall", (req, res) => {
 });
 
 // 🧠 MyRover.io Rate Calculation
-// /api/rates endpoint with auto-enabled service selection
+// /api/rates endpoint with all enabled services
 app.post("/api/rates", async (req, res) => {
   const { origin, destination, items } = req.body;
   console.log("📦 Rate request received:", { origin, destination, items });
 
-  // If API key missing, return dummy rates
   if (!process.env.MYROVER_API_KEY) {
     console.warn("MYROVER_API_KEY not set, returning dummy rates.");
-    const fallbackRates = [
-      { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-      { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-    ];
-    return res.json({ data: fallbackRates });
+    return res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ]
+    });
   }
 
   try {
-    // 1️⃣ Fetch enabled services
+    // 1️⃣ Get enabled services
     const servicesResp = await axios.get("https://apis.myrover.io/GetServices", {
-      headers: {
-        "Authorization": process.env.MYROVER_API_KEY,
-        "Content-Type": "application/json"
-      }
+      headers: { "Authorization": process.env.MYROVER_API_KEY }
     });
 
     const enabledServices = servicesResp.data?.services || [];
     if (enabledServices.length === 0) {
-      console.warn("No enabled MyRover services found, returning fallback rates.");
-      throw new Error("No enabled services");
+      throw new Error("No enabled MyRover services");
     }
 
-    // 2️⃣ Pick first enabled service_type
-    const serviceType = enabledServices[0].abbreviation;
-    console.log("Using enabled service_type:", serviceType);
+    const rates = [];
 
-    // 3️⃣ Call MyRover API
-    const payload = {
-      origin,
-      destination,
-      items,
-      service_type: serviceType
-    };
+    // 2️⃣ Loop through all enabled services
+    for (let service of enabledServices) {
+      try {
+        const payload = { origin, destination, items, service_type: service.abbreviation };
 
-    const response = await axios.post(
-      "https://apis.myrover.io/GetPrice",
-      payload,
-      {
-        headers: {
-          "Authorization": process.env.MYROVER_API_KEY,
-          "Content-Type": "application/json"
-        }
+        const response = await axios.post(
+          "https://apis.myrover.io/GetPrice",
+          payload,
+          { headers: { "Authorization": process.env.MYROVER_API_KEY, "Content-Type": "application/json" } }
+        );
+
+        const rateData = response.data?.rates || [];
+        rateData.forEach(rate => {
+          rates.push({
+            carrier_quote: {
+              code: rate.service_code || service.abbreviation,
+              display_name: rate.service_name || service.name || service.name,
+              cost: rate.price || 10.5
+            }
+          });
+        });
+
+      } catch (err) {
+        console.warn(`❌ Service ${service.abbreviation} failed:`, err.response?.data || err.message);
+        // Skip failed service
       }
-    );
+    }
 
-    const ratesArray = response.data?.rates || [];
-    let rates = ratesArray.map(rate => ({
-      carrier_quote: {
-        code: rate.service_code || rate.code || serviceType,
-        display_name: rate.service_name || rate.name || "Standard Shipping",
-        cost: rate.price || 10.5
-      }
-    }));
-
+    // 3️⃣ If no valid rates, send fallback
     if (rates.length === 0) {
-      // fallback if empty
-      rates = [
+      rates.push(
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
         { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-      ];
+      );
     }
 
     res.json({ data: rates });
 
   } catch (err) {
     console.error("❌ MyRover API error:", err.response?.data || err.message);
-
-    // fallback dummy rates
     res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
