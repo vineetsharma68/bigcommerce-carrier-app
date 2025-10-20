@@ -207,6 +207,49 @@ app.get("/api/myrover-services", async (req, res) => {
   }
 });
 
+// 🔹 Quick test route for MyRover shipping rate
+app.get("/api/test-rates", async (req, res) => {
+  try {
+    console.log("🧪 Testing MyRover rate calculation...");
+
+    const payload = {
+      origin: { postal_code: "L6H7T7", country_code: "CA" },
+      destination: { postal_code: "M4B1B3", country_code: "CA" },
+      items: [
+        { quantity: 1, weight: { value: 2, units: "kg" } }
+      ],
+      service_type: "CW" // ✅ You can try "FRS", "LS", "MS", etc.
+    };
+
+    const response = await axios.post(
+      "https://apis.myrover.io/GetPrice",
+      payload,
+      {
+        headers: {
+          "Authorization": process.env.MYROVER_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    console.log("✅ MyRover API Test Response:", response.data);
+
+    res.json({
+      success: true,
+      message: "✅ MyRover API working!",
+      request: payload,
+      response: response.data
+    });
+
+  } catch (error) {
+    console.error("❌ Test Rate Error:", error.response?.data || error.message);
+    res.status(400).json({
+      success: false,
+      message: "❌ MyRover API Test Failed",
+      error: error.response?.data || error.message
+    });
+  }
+});
 
 
 // 🌐 New Route to get Render Server Public IP
