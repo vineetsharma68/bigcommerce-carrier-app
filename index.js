@@ -69,7 +69,8 @@ app.post("/api/rates", async (req, res) => {
     // ✅ MyRover API Request (correct authorization header)
     const response = await axios.post(
       "https://apis.myrover.io/GetPrice",
-      { origin, destination, items },
+      { origin, destination, items, service_type: "STANDARD" // ✅ Added to fix 422 error
+        },
       {
         headers: {
           "Authorization": process.env.MYROVER_API_KEY, // <--- Correct format
