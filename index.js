@@ -10,7 +10,7 @@ app.use(bodyParser.json());
    🏠 HOME
 ----------------------------------------------------- */
 app.get("/", (req, res) => {
-  res.send("🚀 BigCommerce + MyRover Carrier App Running!");
+  res.send("🚀 BigCommerce + MyRover Carrier App Running (Parallel Version)!");
 });
 
 /* -----------------------------------------------------
@@ -54,7 +54,7 @@ app.post("/api/uninstall", (req, res) => {
 });
 
 /* -----------------------------------------------------
-   🚚 MyRover SHIPPING RATES
+   🚚 MyRover SHIPPING RATES (Parallel)
 ----------------------------------------------------- */
 app.post("/api/rates", async (req, res) => {
   const { origin, destination } = req.body;
@@ -71,7 +71,7 @@ app.post("/api/rates", async (req, res) => {
   }
 
   try {
-    // STEP 1: Fetch active services from MyRover
+    // STEP 1: Fetch all available services
     const serviceRes = await axios.post(
       "https://apis.myrover.io/GetServices",
       {},
@@ -88,12 +88,10 @@ app.post("/api/rates", async (req, res) => {
 
     if (services.length === 0) throw new Error("No active services found");
 
-    // STEP 2: Get pricing for each service_id
-    const allRates = [];
-
-    for (const service of services) {
-      try {
-        const priceRes = await axios.post(
+    // STEP 2: Prepare parallel requests for GetPrice
+    const promises = services.map((service) =>
+      axios
+        .post(
           "https://apis.myrover.io/GetPrice",
           {
             service_id: service.id,
@@ -108,27 +106,32 @@ app.post("/api/rates", async (req, res) => {
               "Content-Type": "application/json",
             },
           }
-        );
+        )
+        .then((priceRes) => {
+          const cost = priceRes.data?.data?.cost || 0;
+          console.log(`✅ ${service.name}: ₹${cost}`);
+          if (cost > 0) {
+            return {
+              carrier_quote: {
+                code: service.abbreviation || `srv-${service.id}`,
+                display_name: service.name,
+                cost,
+              },
+            };
+          }
+          return null;
+        })
+        .catch((err) => {
+          console.warn(`⚠️ ${service.name} failed:`, err.response?.data || err.message);
+          return null;
+        })
+    );
 
-        const cost = priceRes.data?.data?.cost || 0;
-        console.log(`✅ ${service.name} - $${cost}`);
+    // STEP 3: Run all GetPrice requests in parallel
+    const results = await Promise.all(promises);
+    const validRates = results.filter((r) => r !== null);
 
-        if (cost > 0) {
-          allRates.push({
-            carrier_quote: {
-              code: service.abbreviation || `srv-${service.id}`,
-              display_name: service.name,
-              cost,
-            },
-          });
-        }
-      } catch (innerErr) {
-        console.warn(`⚠️ ${service.name} failed:`, innerErr.response?.data || innerErr.message);
-      }
-    }
-
-    // STEP 3: Return collected rates (or fallback)
-    if (allRates.length === 0) {
+    if (validRates.length === 0) {
       console.warn("⚠️ No valid rates returned from MyRover, using fallback.");
       return res.json({
         data: [
@@ -138,7 +141,7 @@ app.post("/api/rates", async (req, res) => {
       });
     }
 
-    res.json({ data: allRates });
+    res.json({ data: validRates });
   } catch (err) {
     console.error("❌ MyRover API error:", err.response?.data || err.message);
     res.json({
@@ -189,4 +192,4 @@ app.get("/api/check", (req, res) => {
    🟢 START SERVER
 ----------------------------------------------------- */
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} (parallel mode)`));
