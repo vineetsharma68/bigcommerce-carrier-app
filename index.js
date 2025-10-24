@@ -197,31 +197,14 @@ app.get("/api/check", (req, res) => {
 
 // ✅ 1. Account Status Endpoint (BigCommerce calls this first)
 app.get("/account-status", (req, res) => {
-  try {
-    console.log("✅ /account-status hit!");
-
-    // Optional header validation
-    const storeHash = req.headers["x-bc-store-hash"];
-    const authHeader = req.headers["authorization"];
-
-    // Only log, don’t block response
-    console.log("Store Hash:", storeHash);
-    console.log("Authorization:", authHeader);
-
-    // Always return success (BigCommerce expects this exact format)
-    return res.status(200).json({
-      status: "active",
-      messages: []
-    });
-
-  } catch (err) {
-    console.error("Account Status Error:", err);
-    return res.status(500).json({
-      status: "error",
-      messages: ["Internal server error"]
-    });
-  }
+  // BigCommerce just needs a 200 JSON with this exact structure
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify({
+    status: "active",
+    messages: []
+  }));
 });
+
 
 
 // ✅ 2. Metadata Endpoint (BigCommerce reads app info from here)
