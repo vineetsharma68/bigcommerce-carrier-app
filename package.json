@@ -1,15 +1,30 @@
 {
-  "name": "bigcommerce-carrier-app",
+  "name": "myrover-carrier",
   "version": "1.0.0",
+  "description": "Custom BigCommerce carrier shipping app integrated with MyRover.io",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.7.2",
     "body-parser": "^1.20.2",
-    "axios": "^1.4.0",
-    "dotenv": "^16.3.1"
-  }
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "bigcommerce",
+    "carrier",
+    "shipping",
+    "api",
+    "myrover"
+  ],
+  "author": "Vineet Kumar",
+  "license": "MIT"
 }
-
