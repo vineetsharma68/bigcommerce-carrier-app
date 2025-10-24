@@ -35,4 +35,52 @@ app.post("/api/check", (req, res) => {
   res.status(200).end(JSON.stringify({ data: { status: "active" } }));
 });
 
-// --------------------------
+// ---------------------------
+// 3️⃣ Metadata
+// ---------------------------
+app.get("/api/metadata", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).json({
+    carriers: [
+      {
+        carrier_id: "myrover",
+        label: "MyRover Shipping",
+        countries: ["CA"]
+      }
+    ]
+  });
+});
+
+// ---------------------------
+// 4️⃣ Rates
+// ---------------------------
+app.post("/api/rates", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+
+  res.status(200).json({
+    quotes: [
+      {
+        carrier_id: "myrover",
+        carrier_name: "MyRover Shipping",
+        service_id: "standard",
+        service_name: "Standard Delivery (3-5 days)",
+        rate: 12.99,
+        transit_time: "3-5 business days"
+      },
+      {
+        carrier_id: "myrover",
+        carrier_name: "MyRover Shipping",
+        service_id: "express",
+        service_name: "Express Delivery (1-2 days)",
+        rate: 24.99,
+        transit_time: "1-2 business days"
+      }
+    ]
+  });
+});
+
+// ---------------------------
+// 5️⃣ Start Server
+// ---------------------------
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 MyRover Carrier running on port ${PORT}`));
