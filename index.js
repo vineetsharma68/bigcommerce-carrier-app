@@ -167,6 +167,36 @@ app.get("/api/check", (req, res) => {
 });
 
 
+import jwt from "jsonwebtoken";
+
+// Load endpoint for BigCommerce App
+app.get("/api/load", async (req, res) => {
+  try {
+    const { signed_payload_jwt } = req.query;
+
+    if (!signed_payload_jwt) {
+      return res.status(400).send("Missing signed_payload_jwt");
+    }
+
+    // Decode and verify JWT (BigCommerce signed token)
+    const payload = jwt.verify(signed_payload_jwt, process.env.CLIENT_SECRET, {
+      algorithms: ["HS256"],
+    });
+
+    console.log("✅ Load endpoint hit:", payload);
+
+    // Example redirect to a dashboard page
+    res.send(`<h1>Welcome to MyRover Shipping App 🚚</h1>
+              <p>Store: ${payload.context}</p>
+              <p>User: ${payload.user?.email}</p>`);
+  } catch (err) {
+    console.error("❌ Load error:", err.message);
+    res.status(400).send("Invalid or expired signed_payload_jwt");
+  }
+});
+
+
+
 // ✅ 8️⃣ Start Server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
