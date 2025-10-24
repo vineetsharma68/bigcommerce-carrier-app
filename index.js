@@ -31,14 +31,17 @@ app.get("/api/load", (req, res) => {
 
 // --- Check callback
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
+  // 100% exact headers
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
 
-  res.status(200).send(JSON.stringify({ data: { status: "active" } }));
+  // Exact 2025 BigCommerce spec
+  const body = { data: { status: "active" } };
+  res.status(200).end(JSON.stringify(body)); // use end() to avoid extra chars
 });
+
 
 // --- Start server
 const PORT = process.env.PORT || 10000;
