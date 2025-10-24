@@ -182,6 +182,12 @@ app.get("/api/test-myrover", async (req, res) => {
 });
 
 
+// Load Callback
+app.get("/api/load", (req, res) => {
+  res.send("🚀 App loaded inside BigCommerce Control Panel!");
+});
+
+
 // ✅ 7️⃣ Health check route
 app.get("/api/check", (req, res) => {
   res.json({ success: true, message: "Carrier App connection OK ✅" });
