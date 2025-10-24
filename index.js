@@ -194,16 +194,24 @@ app.get("/api/check", (req, res) => {
 });
 
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 
 // ✅ 1. Account Status Endpoint (BigCommerce calls this first)
 app.get("/account-status", (req, res) => {
-  // BigCommerce just needs a 200 JSON with this exact structure
+  console.log("✅ Account status route HIT by BigCommerce");
+  console.log("Headers:", req.headers);
+
   res.setHeader("Content-Type", "application/json");
   res.status(200).send(JSON.stringify({
     status: "active",
     messages: []
   }));
 });
+
 
 
 
