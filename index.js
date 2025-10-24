@@ -183,9 +183,23 @@ app.get("/api/test-myrover", async (req, res) => {
 
 
 // Load Callback
-app.get("/api/load", (req, res) => {
+/*app.get("/api/load", (req, res) => {
   res.send("🚀 App loaded inside BigCommerce Control Panel!");
+});*/
+app.get("/api/load", (req, res) => {
+  console.log("✅ /api/load HIT");
+
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify({
+    data: {
+      app_id: "myrover_carrier",
+      name: "MyRover Shipping",
+      regions: ["CA"],       // Supported countries
+      settings: {}           // Optional settings
+    }
+  }));
 });
+
 
 
 // ✅ 7️⃣ Health check route
@@ -196,25 +210,13 @@ app.get("/api/load", (req, res) => {
 
 // ✅ Account verification (used by BigCommerce to check status)
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT by BigCommerce");
+  console.log("✅ /api/check HIT");
 
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0"
-  });
-
-  // Exact expected body — must have "data.status"
-  const responseBody = {
-    data: {
-      status: "active"
-    }
-  };
-
-  res.end(JSON.stringify(responseBody));
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify({
+    data: { status: "active" }
+  }));
 });
-
 
 
 // ✅ Metadata endpoint (BigCommerce checks available countries/services)
