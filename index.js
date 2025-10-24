@@ -197,6 +197,8 @@ app.get("/api/check", (req, res) => {
 
 // Account Status
 app.get("/account-status", (req, res) => {
+    console.log("✅ Account Status hit!");
+
   const storeHash = req.headers['x-bc-store-hash'];
   const authHeader = req.headers['authorization'];
 
