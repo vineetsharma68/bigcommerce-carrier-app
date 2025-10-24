@@ -189,12 +189,39 @@ app.get("/api/load", (req, res) => {
 
 
 // ✅ 7️⃣ Health check route
-app.get("/api/check", (req, res) => {
-  res.json({ success: true, message: "Carrier App connection OK ✅" });
+//app.get("/api/check", (req, res) => {
+//  res.json({ success: true, message: "Carrier App connection OK ✅" });
+//});
+
+
+// ✅ Account verification (used by BigCommerce to check status)
+app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT by BigCommerce");
+  console.log("Headers:", req.headers);
+
+  // Respond with HTTP 200 and a status field
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify({
+    status: "active",
+    messages: []
+  }));
 });
 
+// ✅ Metadata endpoint (BigCommerce checks available countries/services)
+app.get("/api/metadata", (req, res) => {
+  console.log("✅ /api/metadata HIT");
+  res.status(200).json({
+    carriers: [
+      {
+        carrier_id: "myrover",
+        label: "MyRover Shipping",
+        countries: ["CA"], // Canada
+      },
+    ],
+  });
+});
 
-app.use((req, res, next) => {
+/*app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   next();
 });
@@ -239,7 +266,7 @@ app.get("/metadata", (req, res) => {
   }
 });
 
-
+*/
 // ✅ 8️⃣ Start Server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
