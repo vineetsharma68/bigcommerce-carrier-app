@@ -194,6 +194,40 @@ app.get("/api/check", (req, res) => {
 });
 
 
+
+// Account Status
+app.get("/account-status", (req, res) => {
+  const storeHash = req.headers['x-bc-store-hash'];
+  const authHeader = req.headers['authorization'];
+
+  if (!storeHash || !authHeader) {
+    return res.status(400).json({
+      status: "error",
+      messages: ["Missing store_hash or authorization token"]
+    });
+  }
+
+  return res.status(200).json({
+    status: "active",
+    messages: []
+  });
+});
+
+// Metadata
+app.get("/metadata", (req, res) => {
+  return res.status(200).json({
+    id: "myrover_carrier",
+    display_name: "MyRover Shipping",
+    active: true,
+    requires_address: true,
+    services: [
+      { id: "standard", display_name: "Standard Shipping" },
+      { id: "express", display_name: "Express Shipping" }
+    ]
+  });
+});
+
+
 // ✅ 8️⃣ Start Server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
