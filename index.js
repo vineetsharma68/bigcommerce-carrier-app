@@ -197,15 +197,14 @@ app.get("/api/load", (req, res) => {
 // ✅ Account verification (used by BigCommerce to check status)
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT by BigCommerce");
-  console.log("Headers:", req.headers);
-
-  // Respond with HTTP 200 and a status field
   res.setHeader("Content-Type", "application/json");
   res.status(200).send(JSON.stringify({
-    status: "active",
-    messages: []
+    data: {
+      status: "active"
+    }
   }));
 });
+
 
 // ✅ Metadata endpoint (BigCommerce checks available countries/services)
 app.get("/api/metadata", (req, res) => {
