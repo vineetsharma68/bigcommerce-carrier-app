@@ -1,111 +1,161 @@
-import express from "express";
-import bodyParser from "body-parser";
-import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
+require("dotenv").config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
 
 const app = express();
 app.use(bodyParser.json());
 
-// Home route
+// ✅ 1️⃣ Home route
 app.get("/", (req, res) => {
-  res.send("Hello from BigCommerce Carrier App!");
+  res.send("🚀 MyRover Carrier App is running successfully!");
 });
 
-// OAuth callback
+
+// ✅ 2️⃣ OAuth Step 1 - BigCommerce authorization
+app.get("/api/auth", async (req, res) => {
+  console.log("✅ OAuth Step 1 triggered", req.query);
+
+  const { context } = req.query;
+  if (!context) return res.status(400).send("❌ Missing store context");
+
+  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
+
+  // Redirect to BigCommerce OAuth login
+  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=${encodeURIComponent("store_v2_orders store_v2_information store_v2_shipping")}&redirect_uri=${encodeURIComponent(
+    redirectUri
+  )}&response_type=code&context=${context}`;
+
+  res.redirect(installUrl);
+});
+
+
+// ✅ 3️⃣ OAuth Step 2 - Callback from BigCommerce
 app.get("/api/auth/callback", async (req, res) => {
+  console.log("✅ OAuth Callback triggered:", req.query);
+
   const { code, scope, context } = req.query;
-  if (!code) return res.status(400).send("Missing OAuth code");
+  if (!code) return res.status(400).send("❌ Missing OAuth code");
 
   try {
-    const response = await axios.post(
-      "https://login.bigcommerce.com/oauth2/token",
-      {
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET,
-        redirect_uri: process.env.REDIRECT_URI,
-        code,
-        scope,
-        context,
-      }
-    );
+    const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
+      grant_type: "authorization_code",
+      code,
+      scope,
+      context,
+    });
 
-    console.log("OAuth Response:", response.data);
-    res.send("✅ App installed successfully! Token saved.");
+    console.log("✅ OAuth Token Received:", tokenResponse.data);
+    res.send("✅ App installed successfully! You can close this window now.");
   } catch (err) {
-    console.error("OAuth Error:", err.response?.data || err.message);
+    console.error("❌ OAuth Error:", err.response?.data || err.message);
     res.status(500).send("OAuth failed");
   }
 });
 
-// Load callback
-app.get("/api/load", (req, res) => {
-  res.send("🚀 App loaded inside BigCommerce Control Panel!");
-});
 
-// Uninstall callback
+// ✅ 4️⃣ Uninstall callback
 app.post("/api/uninstall", (req, res) => {
-  console.log("Uninstall request received:", req.body);
-  res.send("❌ App uninstalled, cleanup done.");
+  console.log("❌ App Uninstalled:", req.body);
+  res.send("✅ Uninstall cleanup done.");
 });
 
-// /api/rates endpoint using MyRover GetPrice
-app.post("/api/rates", async (req, res) => {
-  const { origin, destination, items, service_id } = req.body;
 
-  console.log("📦 Rate request received:", { origin, destination, items, service_id });
+// ✅ 5️⃣ Fetch available MyRover services
+app.get("/api/myrover/services", async (req, res) => {
+  try {
+    const response = await axios.post("https://apis.myrover.io/GetServices", {}, {
+      headers: {
+        Authorization: process.env.MYROVER_API_KEY,
+        "Content-Type": "application/json",
+      },
+    });
 
-  if (!process.env.MYROVER_API_KEY) {
-    console.warn("MYROVER_API_KEY missing, returning dummy rates.");
-    return res.json({
-      data: [
-        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-      ]
+    console.log("📦 MyRover Services:", response.data);
+    res.json({
+      success: true,
+      message: "Fetched available services from MyRover",
+      data: response.data,
+    });
+  } catch (err) {
+    console.error("❌ Error fetching MyRover services:", err.response?.data || err.message);
+    res.status(500).json({
+      success: false,
+      error: err.response?.data || err.message,
     });
   }
+});
+
+
+// ✅ 6️⃣ Shipping Rates endpoint
+app.post("/api/rates", async (req, res) => {
+  const { origin, destination, items } = req.body;
+  console.log("📦 Rate request received:", { origin, destination, items });
 
   try {
-    const response = await axios.post(
+    // Fetch MyRover services dynamically (to get service IDs)
+    const serviceRes = await axios.post("https://apis.myrover.io/GetServices", {}, {
+      headers: {
+        Authorization: process.env.MYROVER_API_KEY,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const services = serviceRes.data?.services || [];
+    console.log(`✅ Found ${services.length} MyRover services`);
+
+    // Test only first available service for demo (you can extend this)
+    const service = services[0];
+    console.log("🧩 Using service:", service);
+
+    // Fake pickup/drop addresses for test — later map them dynamically
+    const pickupAddress = "100 Dundas St W, Toronto, ON";
+    const dropAddress = "200 King St W, Toronto, ON";
+
+    // MyRover GetPrice API call
+    const priceRes = await axios.post(
       "https://apis.myrover.io/GetPrice",
       {
-        service_id,
-        priority_id: 1, // 1 = Normal
-        pickup_address: `${origin.postal_code}, ${origin.country_code}`,
-        drop_address: `${destination.postal_code}, ${destination.country_code}`,
-        items,
+        service_id: service.id,
+        priority_id: 1,
+        pickup_address: pickupAddress,
+        drop_address: dropAddress,
       },
       {
         headers: {
           Authorization: process.env.MYROVER_API_KEY,
           "Content-Type": "application/json",
-        }
+        },
       }
     );
 
-    console.log("MyRover.io response:", response.data);
+    console.log("💰 MyRover Price Response:", priceRes.data);
 
-    const data = response.data?.data || {};
-    res.json({
-      data: [
-        {
-          carrier_quote: {
-            code: service_id.toString(),
-            display_name: `MyRover Service ${service_id}`,
-            cost: data.cost || 10.5
-          }
-        }
-      ]
-    });
+    const cost = priceRes.data?.data?.cost || 15.0;
 
+    const rates = [
+      {
+        carrier_quote: {
+          code: service.abbreviation || "myrover",
+          display_name: service.name || "MyRover Shipping",
+          cost: cost,
+        },
+      },
+    ];
+
+    res.json({ data: rates });
   } catch (err) {
-    console.error("❌ MyRover.io API error:", err.response?.data || err.message);
+    console.error("❌ MyRover API error:", err.response?.data || err.message);
+
+    // fallback dummy rates
     res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
-      ]
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
+      ],
     });
   }
 });
@@ -131,11 +181,13 @@ app.get("/api/test-myrover", async (req, res) => {
   }
 });
 
-// Check connection
+
+// ✅ 7️⃣ Health check route
 app.get("/api/check", (req, res) => {
-  res.json({ success: true, message: "Carrier service connection OK ✅" });
+  res.json({ success: true, message: "Carrier App connection OK ✅" });
 });
 
-// Start server
+
+// ✅ 8️⃣ Start Server
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
