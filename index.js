@@ -195,38 +195,57 @@ app.get("/api/check", (req, res) => {
 
 
 
-// Account Status
+// ✅ 1. Account Status Endpoint (BigCommerce calls this first)
 app.get("/account-status", (req, res) => {
-    console.log("✅ Account Status hit!");
+  try {
+    console.log("✅ /account-status hit!");
 
-  const storeHash = req.headers['x-bc-store-hash'];
-  const authHeader = req.headers['authorization'];
+    // Optional header validation
+    const storeHash = req.headers["x-bc-store-hash"];
+    const authHeader = req.headers["authorization"];
 
-  if (!storeHash || !authHeader) {
-    return res.status(400).json({
+    // Only log, don’t block response
+    console.log("Store Hash:", storeHash);
+    console.log("Authorization:", authHeader);
+
+    // Always return success (BigCommerce expects this exact format)
+    return res.status(200).json({
+      status: "active",
+      messages: []
+    });
+
+  } catch (err) {
+    console.error("Account Status Error:", err);
+    return res.status(500).json({
       status: "error",
-      messages: ["Missing store_hash or authorization token"]
+      messages: ["Internal server error"]
     });
   }
-
-  return res.status(200).json({
-    status: "active",
-    messages: []
-  });
 });
 
-// Metadata
+
+// ✅ 2. Metadata Endpoint (BigCommerce reads app info from here)
 app.get("/metadata", (req, res) => {
-  return res.status(200).json({
-    id: "myrover_carrier",
-    display_name: "MyRover Shipping",
-    active: true,
-    requires_address: true,
-    services: [
-      { id: "standard", display_name: "Standard Shipping" },
-      { id: "express", display_name: "Express Shipping" }
-    ]
-  });
+  try {
+    console.log("✅ /metadata hit!");
+
+    return res.status(200).json({
+      id: "myrover_carrier",
+      display_name: "MyRover Shipping",
+      active: true,
+      requires_address: true,
+      services: [
+        { id: "standard", display_name: "Standard Shipping" },
+        { id: "express", display_name: "Express Shipping" }
+      ]
+    });
+  } catch (err) {
+    console.error("Metadata Error:", err);
+    return res.status(500).json({
+      status: "error",
+      messages: ["Internal server error"]
+    });
+  }
 });
 
 
