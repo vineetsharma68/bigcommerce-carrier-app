@@ -1,25 +1,18 @@
 const express = require("express");
 const app = express();
-
 app.use(express.json());
 
-// --- Debug Middleware: log every incoming request
-app.use((req, res, next) => {
-  console.log(`🔹 Incoming request: ${req.method} ${req.url}`);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
-  next();
-});
-
-// --- Load callback
+// ---------------------------
+// 1️⃣ Load Callback
+// ---------------------------
 app.get("/api/load", (req, res) => {
-  console.log("✅ /api/load HIT");
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
 
-  res.status(200).send(JSON.stringify({
+  // Exact BigCommerce 2025 spec
+  res.status(200).end(JSON.stringify({
     data: {
       app_id: "myrover_carrier",
       name: "MyRover Shipping",
@@ -29,20 +22,64 @@ app.get("/api/load", (req, res) => {
   }));
 });
 
-// --- Check callback
+// ---------------------------
+// 2️⃣ Check Callback
+// ---------------------------
 app.post("/api/check", (req, res) => {
-  // 100% exact headers
   res.setHeader("Content-Type", "application/json");
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
 
-  // Exact 2025 BigCommerce spec
-  const body = { data: { status: "active" } };
-  res.status(200).end(JSON.stringify(body)); // use end() to avoid extra chars
+  res.status(200).end(JSON.stringify({ data: { status: "active" } }));
 });
 
+// ---------------------------
+// 3️⃣ Metadata
+// ---------------------------
+app.get("/api/metadata", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).json({
+    carriers: [
+      {
+        carrier_id: "myrover",
+        label: "MyRover Shipping",
+        countries: ["CA"]
+      }
+    ]
+  });
+});
 
-// --- Start server
+// ---------------------------
+// 4️⃣ Rates
+// ---------------------------
+app.post("/api/rates", (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+
+  res.status(200).json({
+    quotes: [
+      {
+        carrier_id: "myrover",
+        carrier_name: "MyRover Shipping",
+        service_id: "standard",
+        service_name: "Standard Delivery (3-5 days)",
+        rate: 12.99,
+        transit_time: "3-5 business days"
+      },
+      {
+        carrier_id: "myrover",
+        carrier_name: "MyRover Shipping",
+        service_id: "express",
+        service_name: "Express Delivery (1-2 days)",
+        rate: 24.99,
+        transit_time: "1-2 business days"
+      }
+    ]
+  });
+});
+
+// ---------------------------
+// Start Server
+// ---------------------------
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Debug MyRover Carrier running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 MyRover Carrier running on port ${PORT}`));
