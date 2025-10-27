@@ -20,6 +20,8 @@ const MY_DISPLAY_NAME = "MyRover Shipping";
 /**
  * BigCommerce signed_payload को वेरिफाई करने के लिए
  */
+// यह सुनिश्चित करता है कि आपने crypto को require किया है: const crypto = require('crypto');
+
 function verifySignedRequest(signedPayload, clientSecret) {
     if (!signedPayload || !clientSecret) return false;
 
@@ -28,26 +30,30 @@ function verifySignedRequest(signedPayload, clientSecret) {
 
     const signaturePart = parts[0];
     const dataPart = parts[1];
-    const trimmedSecret = clientSecret.trim(); // Trim the secret
+    
+    // 🔑 CLIENT_SECRET को Trim करें
+    const trimmedSecret = clientSecret.trim(); 
 
-    // 1. हस्ताक्षर (Signature) को Hex में बदलें
-    // URL-Safe Base64 को मानक Base64 में बदलें
+    // 1. हस्ताक्षर (Signature) को Hex में बदलें (भाग 0)
+    // Base64URL को मानक Base64 में बदलें
     const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
     const incomingSignature = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
     
-    // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें
+    // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें (भाग 1)
+    // Hmac हमेशा मूल dataPart (Base64URL स्ट्रिंग) का उपयोग करता है, 
+    // लेकिन हम सुनिश्चित करते हैं कि गुप्त कुंजी में कोई whitespace नहीं है।
     const expectedSignature = crypto
-        .createHmac('sha256', trimmedSecret)
-        .update(dataPart) // असंशोधित डेटा भाग का उपयोग करें
+        .createHmac('sha256', trimmedSecret) 
+        .update(dataPart) // 🔑 Hmac गणना के लिए सीधा Base64URL डेटा पार्ट उपयोग करें
         .digest('hex');
     
     // DEBUG logs
     console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
     console.log(`DEBUG: Incoming Signature: ${incomingSignature}`);
 
+    // 4. तुलना करें
     return expectedSignature === incomingSignature;
 }
-
 /**
  * Checks for and registers/updates the Carrier Object in BigCommerce.
  */
