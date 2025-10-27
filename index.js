@@ -56,23 +56,17 @@ app.get("/api/metadata", (req, res) => {
 
 // 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT: Account Status Check");
+    console.log("✅ /api/check HIT: Account Status Check");
 
-  res.set({
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-    "Pragma": "no-cache",
-    "Expires": "0"
-  });
-
-  const response = {
-    data: {
-      status: "ACTIVE"
-    }
-  };
-
-  res.status(200).send(JSON.stringify(response));
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.status(200).json({
+        data: {
+            status: "OK",
+            account_status: "active"
+        }
+    });
 });
+
 
 // 🟣 Rates endpoint (for shipping quote calculation)
 app.post("/api/rates", (req, res) => {
