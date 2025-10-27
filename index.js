@@ -69,14 +69,25 @@ app.get("/api/metadata", (req, res) => {
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
 
-  res.status(200).json({
+  const payload = {
     data: {
       id: "myrover",
       name: "MyRover Shipping",
       status: "OK"
     }
+  };
+
+  res.writeHead(200, {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Connection": "close",
   });
+
+  const body = JSON.stringify(payload);
+  console.log("🚀 Sending raw JSON:", body);
+  res.end(body);
 });
+
 
 
 
