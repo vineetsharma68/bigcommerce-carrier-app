@@ -71,24 +71,19 @@ app.post("/api/check", (req, res) => {
   console.log("Headers:", JSON.stringify(req.headers, null, 2));
   console.log("Body:", JSON.stringify(req.body, null, 2));
 
-  const payload = {
+  const responseData = {
     data: {
-      id: "myrover",
-      name: "MyRover Shipping",
-      status: "OK"
+      account_status: "active", // required field
+      connected: true,          // required field
+      message: "Connection verified successfully"
     }
   };
 
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Connection": "close"
-  });
+  console.log("🚀 Sending Response:", JSON.stringify(responseData, null, 2));
 
-  const body = JSON.stringify(payload);
-  console.log("🚀 Sending raw JSON:", body);
-  res.end(body);
+  res.status(200).json(responseData);
 });
+
 
 
 
