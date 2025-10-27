@@ -349,12 +349,13 @@ app.get("/api/load", (req, res) => {
   return res.status(200).json({ status: "active" });
 });*/
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT: Sending simple status: active");
-  
-  // 🔑 200 OK स्टेटस और सरल JSON
+  console.log("✅ /api/check HIT: Cache Control Added");
+
+  // 🔑 कैशिंग को रोकने के लिए (यह BC कैश को साफ़ करने में मदद कर सकता है)
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
+  
   return res.status(200).json({ 
-    "status": "active",
-    "messages": [] // कभी-कभी एक खाली messages array की आवश्यकता होती है 
+    status: "active" 
   });
 });
 
