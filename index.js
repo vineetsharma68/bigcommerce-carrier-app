@@ -68,6 +68,8 @@ app.get("/api/metadata", (req, res) => {
 // 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
 
   const payload = {
     data: {
@@ -80,13 +82,14 @@ app.post("/api/check", (req, res) => {
   res.writeHead(200, {
     "Content-Type": "application/json",
     "Cache-Control": "no-cache, no-store, must-revalidate",
-    "Connection": "close",
+    "Connection": "close"
   });
 
   const body = JSON.stringify(payload);
   console.log("🚀 Sending raw JSON:", body);
   res.end(body);
 });
+
 
 
 
