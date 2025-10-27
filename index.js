@@ -229,18 +229,17 @@ app.get("/api/load", (req, res) => {
 });*/
 
 // ✅ Account verification (used by BigCommerce to check status) - FINAL REVISION
+// ✅ Account verification (used by BigCommerce to check status) - REVISED
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
-  
-  // 🔑 सबसे महत्वपूर्ण: BigCommerce द्वारा भेजे गए data (Auth/Headers) को लॉग करें।
-  console.log("Request Headers:", req.headers);
-  console.log("Request Body:", req.body); 
-
-  // BigCommerce केवल status: active की अपेक्षा करता है।
+  console.log("✅ /api/check HIT - Sending simple status: active");
+  
+  // 🔑 BigCommerce के लिए अपेक्षित सरल टॉप-लेवल JSON प्रतिक्रिया
   res.status(200).json({ 
     status: "active" 
   });
 });
+
+
 // ✅ Metadata endpoint (BigCommerce checks available countries/services)
 app.get("/api/metadata", (req, res) => {
   console.log("✅ /api/metadata HIT");
