@@ -266,12 +266,83 @@ app.get("/api/test-myrover", async (req, res) => {
 
 
 // Load Callback (केवल App iframe लोड होने पर)
-app.get("/api/load", (req, res) => {
+/*app.get("/api/load", (req, res) => {
   console.log("✅ /api/load HIT");
     // यहां आपका App UI/Settings पेज रेंडर होना चाहिए, JSON नहीं।
     // यह endpoint सीधे BigCommerce App iframe में लोड होता है।
     res.send("<h1>Welcome to MyRover Settings</h1><p>Carrier configured successfully!</p>");
+});*/
+
+const crypto = require('crypto');
+
+// 🔑 सहायक फ़ंक्शन: BigCommerce signed_payload को वेरिफाई करने के लिए
+// यह सुनिश्चित करता है कि अनुरोध (request) BigCommerce से आया है।
+function verifySignedRequest(signedPayload, clientSecret) {
+    if (!signedPayload || !clientSecret) return false;
+
+    // Payload दो भागों में विभाजित होता है: हस्ताक्षर (signature) और डेटा (data)
+    const parts = signedPayload.split('.');
+    if (parts.length !== 2) return false;
+
+    const signature = Buffer.from(parts[0], 'base64').toString('hex');
+    const data = parts[1];
+
+    // अपेक्षित हस्ताक्षर (Expected Signature) की गणना
+    const expectedSignature = crypto
+        .createHmac('sha256', clientSecret)
+        .update(data)
+        .digest('hex');
+
+    // हस्ताक्षर का मिलान (Compare the signatures)
+    return expectedSignature === signature;
+}
+
+// -------------------------------------------------------------
+// ✅ Load Callback (जब उपयोगकर्ता App Launch पर क्लिक करता है)
+// -------------------------------------------------------------
+app.get("/api/load", (req, res) => {
+    console.log("✅ /api/load HIT");
+
+    const signedPayload = req.query.signed_payload;
+    const clientSecret = process.env.CLIENT_SECRET;
+
+    if (!signedPayload) {
+        console.error("❌ Load Error: Missing signed_payload");
+        // यदि payload नहीं है, तो BigCommerce को 400 भेजें
+        return res.status(400).send("Bad Request: Missing signed_payload parameter.");
+    }
+    
+    // 🔑 signed_payload का सत्यापन (Verification)
+    if (!verifySignedRequest(signedPayload, clientSecret)) {
+        console.error("❌ Load Error: Invalid signed_payload signature!");
+        // सत्यापन विफल होने पर 401 Unauthorized भेजें
+        return res.status(401).send("Unauthorized: Invalid request signature.");
+    }
+
+    // सत्यापन सफल रहा! अब हम app UI (या सफलता संदेश) लोड कर सकते हैं।
+    console.log("✅ Load Verification Successful. Sending success HTML.");
+
+    // कैरियर सर्विस ऐप के लिए एक सरल HTML प्रतिक्रिया
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <title>MyRover Configuration</title>
+          <style>body { font-family: Arial, sans-serif; padding: 20px; background-color: #f0f2f5; }</style>
+      </head>
+      <body>
+          <h1>🚀 MyRover Carrier App</h1>
+          <p>Configuration panel loaded successfully inside BigCommerce. You can now configure your shipping settings.</p>
+          <p>Please navigate back to Shipping settings to connect your real-time quotes.</p>
+      </body>
+      </html>
+    `);
 });
+
+// सुनिश्चित करें कि आपने अपने कोड में crypto मॉड्यूल को require किया है:
+// const crypto = require('crypto');
+// -------------------------------------------------------------
 
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
