@@ -292,8 +292,8 @@ app.get("/api/load", (req, res) => {
 
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
-app.post("/api/check-v2", (req, res) => {
-  console.log("✅ /api/check-v2 HIT");
+app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT");
   return res.status(200).json({ status: "active" });
 });
 
@@ -308,7 +308,7 @@ app.get("/api/metadata", (req, res) => {
         carrier_id: MY_CARRIER_ID, // Ensure this matches the ID used in manageBcCarrierConnection
         label: MY_DISPLAY_NAME,
         countries: ["CA"], 
-        settings_url: `${base_url}/api/check-v2`, 
+        settings_url: `${base_url}/api/check`, 
         rates_url: MY_RATE_URL, 
       },
     ],
