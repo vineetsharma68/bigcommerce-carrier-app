@@ -369,14 +369,17 @@ app.get("/api/metadata", (req, res) => {
     const base_url = process.env.APP_URL;
 
     res.status(200).json({
-        carriers: [{
-            carrier_id: MY_CARRIER_ID,
-            label: MY_DISPLAY_NAME,
-            countries: ["CA", "US"],
-            settings_url: `${base_url}/api/check`, // BC स्टेटस यहाँ से चेक करता है
-            rates_url: `${base_url}/api/rates`,
-        }],
-    });
+  data: {
+    carriers: [{
+      carrier_id: MY_CARRIER_ID,
+      label: MY_DISPLAY_NAME,
+      countries: ["CA"],
+      settings_url: `${base_url}/api/check`,
+      rates_url: `${base_url}/api/rates`
+    }]
+  }
+});
+
 });
 
 
