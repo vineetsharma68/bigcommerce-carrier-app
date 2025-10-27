@@ -228,13 +228,21 @@ app.get("/api/load", (req, res) => {
   });
 });*/
 
-// ✅ Account verification (used by BigCommerce to check status) - FINAL REVISION
-// ✅ Account verification (used by BigCommerce to check status) - REVISED
+// ✅ 7️⃣ Account verification (used by BigCommerce to check status) - FINAL TEST
+// POST method (क्योंकि लॉग्स ने इसकी पुष्टि की है)
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT - Sending simple status: active");
-  
-  // 🔑 BigCommerce के लिए अपेक्षित सरल टॉप-लेवल JSON प्रतिक्रिया
-  res.status(200).json({ 
+
+  // कोई और हेडर या लॉजिक नहीं, केवल अपेक्षित प्रतिक्रिया
+  return res.status(200).json({ 
+    status: "active" 
+  });
+});
+
+// GET method (सिर्फ एक चेक के रूप में, यदि BigCommerce POST में विफल हो रहा है)
+app.get("/api/check", (req, res) => {
+  console.log("⚠️ /api/check HIT (via GET) - Sending simple status: active");
+  return res.status(200).json({ 
     status: "active" 
   });
 });
