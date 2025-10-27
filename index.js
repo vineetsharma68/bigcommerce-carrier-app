@@ -277,35 +277,54 @@ const crypto = require('crypto');
 
 // 🔑 सहायक फ़ंक्शन: BigCommerce signed_payload को वेरिफाई करने के लिए
 // यह सुनिश्चित करता है कि अनुरोध (request) BigCommerce से आया है।
+// यह सुनिश्चित करता है कि आपने crypto को require किया है: const crypto = require('crypto');
+
 function verifySignedRequest(signedPayload, clientSecret) {
     if (!signedPayload || !clientSecret) return false;
 
     const parts = signedPayload.split('.');
     if (parts.length !== 2) return false;
 
-    // 🔑 BigCommerce के Base64URL को मानक Base64 में बदलें (URL Safe)
-    const urlSafeData = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const urlSafeSignature = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+    const signaturePart = parts[0];
+    const dataPart = parts[1];
 
-    const signature = Buffer.from(urlSafeSignature, 'base64').toString('hex');
-    const data = Buffer.from(urlSafeData, 'base64').toString('utf8'); // डेटा को utf8 के रूप में डिकोड करें
+    // BigCommerce Base64URL प्रारूप का उपयोग करता है। हमें इसे मानक Base64 बनाना होगा 
+    // और फिर Hex हस्ताक्षर में बदलना होगा।
 
-    // अपेक्षित हस्ताक्षर (Expected Signature) की गणना
+    // 1. हस्ताक्षर (Signature) को Hex में बदलें (भाग 0)
+    // URL-Safe Base64 को मानक Base64 में बदलें
+    const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
+    const incomingSignature = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
+    
+    // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें (भाग 1)
+    // Hmac हमेशा मूल, असंशोधित dataPart का उपयोग करता है।
     const expectedSignature = crypto
         .createHmac('sha256', clientSecret)
-        .update(parts[1]) // मूल, असंशोधित डेटा भाग का उपयोग करें
+        .update(dataPart) 
         .digest('hex');
-        
-    // एक और दुर्लभ समस्या: कुछ कार्यान्वयन पूरे 'भागों' का उपयोग करते हैं
-    // .update(parts[1]) के बजाय .update(parts[0] + '.' + parts[1]) का प्रयास करें यदि उपर्युक्त विफल हो
-
-    // 🔑 लॉग में दोनों Signature देखें
+    
+    // 3. डीबग लॉग्स (पुराने लॉग से बेहतर)
     console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
-    console.log(`DEBUG: Incoming Signature: ${signature}`);
+    console.log(`DEBUG: Incoming Signature: ${incomingSignature}`);
 
-
-    return expectedSignature === signature;
+    // 4. तुलना करें
+    return expectedSignature === incomingSignature;
 }
+
+// -------------------------------------------------------------
+// आपके /api/load रूट में:
+// -------------------------------------------------------------
+app.get("/api/load", (req, res) => {
+    // ... (trimming और अन्य लॉजिक)
+    
+    // 🔑 Trimmed Secret का उपयोग करके वेरिफिकेशन का प्रयास करें
+    if (!verifySignedRequest(signedPayload, trimmedSecret)) {
+        console.error("❌ Load Error: Invalid signed_payload signature!");
+        return res.status(401).send("Unauthorized: Invalid request signature.");
+    }
+
+    // ... (HTML response code जारी रखें)
+});
 
 // -------------------------------------------------------------
 // ✅ Load Callback (जब उपयोगकर्ता App Launch पर क्लिक करता है)
