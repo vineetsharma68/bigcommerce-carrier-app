@@ -292,24 +292,27 @@ app.get("/api/load", (req, res) => {
 
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
-app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
+app.post("/api/check-v2", (req, res) => {
+  console.log("✅ /api/check-v2 HIT");
   return res.status(200).json({ status: "active" });
 });
 
 
 // ✅ 8️⃣ Metadata endpoint (BigCommerce checks available countries/services)
+// सुनिश्चित करें कि यह कोड आपके index.js में मौजूद है और सही है
 app.get("/api/metadata", (req, res) => {
   console.log("✅ /api/metadata HIT");
-  const base_url = process.env.APP_URL; 
+  
+  const base_url = process.env.APP_URL; 
+
   res.status(200).json({
     carriers: [
       {
-        carrier_id: MY_CARRIER_ID, // Ensure this matches the ID used in manageBcCarrierConnection
-        label: MY_DISPLAY_NAME,
-        countries: ["CA"], 
-        settings_url: `${base_url}/api/check`, 
-        rates_url: MY_RATE_URL, 
+        carrier_id: "myrover",
+        label: "MyRover Shipping",
+        countries: ["CA"], 
+        settings_url: `${base_url}/api/check-v2`, // या जो भी आप उपयोग कर रहे हैं
+        rates_url: `${base_url}/api/rates`, 
       },
     ],
   });
