@@ -343,60 +343,46 @@ app.get("/api/load", (req, res) => {
     `);
 });
 
-// 🟣 Metadata endpoint (register carrier)
-app.get("/api/metadata", (req, res) => {
-  console.log("✅ /api/metadata HIT: Sending Carrier Metadata");
-
-  const base_url = process.env.APP_URL;
-
-  res.status(200).json({
-    data: {
-      carriers: [
-        {
-          id: "myrover",
-          name: "MyRover Shipping",
-          label: "MyRover Shipping",
-          countries: ["CA"],
-          settings_url: `${base_url}/api/check`,
-          connection_form: {
-            properties: []
-          },
-          rate_provider: {
-            type: "external",
-            url: `${base_url}/api/rates`
-          }
-        }
-      ]
-    }
-  });
-});
-
-
-
-// 🟣 Account status check (Configuration test)
+// 9️⃣ Account verification (Configuration URL)
+// 9️⃣ Account verification (Configuration URL)
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT: Account Status Check");
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
-  console.log("Body:", JSON.stringify(req.body, null, 2));
+    console.log("✅ /api/check HIT: Account Status Check");
 
-  const responseData = {
-    data: {
-      id: "myrover",
-      name: "MyRover Shipping",
-      status: "OK",
-      connected: true,
-      account_status: "active",
-      message: "Connection verified successfully"
-    }
-  };
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
 
-  console.log("🚀 Sending Response:", JSON.stringify(responseData, null, 2));
-  res.status(200).json(responseData);
+    return res.status(200).json({
+        data: {
+            status: "active"
+        }
+    });
 });
 
 
 
-// 🟣 Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// 10️⃣ Metadata endpoint
+app.get("/api/metadata", (req, res) => {
+    console.log("✅ /api/metadata HIT: Sending Carrier Metadata");
+
+    const base_url = process.env.APP_URL;
+
+    res.status(200).json({
+  data: {
+    carriers: [{
+      carrier_id: MY_CARRIER_ID,
+      label: MY_DISPLAY_NAME,
+      countries: ["CA"],
+      settings_url: `${base_url}/api/check`,
+      rates_url: `${base_url}/api/rates`
+    }]
+  }
 });
+
+});
+
+
+// 11️⃣ Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
