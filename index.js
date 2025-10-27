@@ -264,14 +264,17 @@ app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
 
   const response = {
-    account_status: "active",
-    connected: true,
-    message: "Connection verified successfully"
+    data: {
+      account_status: "active",
+      connected: true,
+      message: "Connection verified successfully"
+    }
   };
 
   console.log("🚀 Sending Response:", response);
   res.status(200).json(response);
 });
+
 
 
 // -------------------------------
