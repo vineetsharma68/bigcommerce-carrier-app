@@ -89,67 +89,50 @@ app.get("/", (req, res) => {
 });
 
 
+
 // ✅ 2️⃣ OAuth Step 1 - BigCommerce authorization
 app.get("/api/auth", async (req, res) => {
-  console.log("✅ OAuth Step 1 triggered", req.query);
+  console.log("✅ OAuth Step 1 triggered", req.query);
 
-  const { context } = req.query;
-  if (!context) return res.status(400).send("❌ Missing store context");
+  const { context } = req.query;
+  if (!context) return res.status(400).send("❌ Missing store context");
 
-  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
+  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
 
-  // Redirect to BigCommerce OAuth login
-  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=${encodeURIComponent("store_v2_orders store_v2_information store_v2_shipping")}&redirect_uri=${encodeURIComponent(
-    redirectUri
-  )}&response_type=code&context=${context}`;
+  // Redirect to BigCommerce OAuth login
+  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=${encodeURIComponent("store_v2_orders store_v2_information store_v2_shipping")}&redirect_uri=${encodeURIComponent(
+    redirectUri
+  )}&response_type=code&context=${context}`;
 
-  res.redirect(installUrl);
+  res.redirect(installUrl);
 });
 
 
-// ✅ 3️⃣ OAuth Step 2 - Callback from BigCommerce (MODIFIED)
+// ✅ 3️⃣ OAuth Step 2 - Callback from BigCommerce
 app.get("/api/auth/callback", async (req, res) => {
-  console.log("✅ OAuth Callback triggered:", req.query);
+  console.log("✅ OAuth Callback triggered:", req.query);
 
-  const { code, scope, context } = req.query;
-  if (!code) return res.status(400).send("❌ Missing OAuth code");
+  const { code, scope, context } = req.query;
+  if (!code) return res.status(400).send("❌ Missing OAuth code");
 
-  try {
-    const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
-      client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
-      grant_type: "authorization_code",
-      code,
-      scope,
-      context,
-    });
+  try {
+    const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
+      client_id: process.env.CLIENT_ID,
+      client_secret: process.env.CLIENT_SECRET,
+      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
+      grant_type: "authorization_code",
+      code,
+      scope,
+      context,
+    });
 
-    // --- NEW LOGIC: Extract Tokens and Manage Carrier ---
-    const { access_token } = tokenResponse.data;
-    // context format: "stores/xxxxxx"
-    const storeHash = context.split('/')[1]; 
-
-    // A. क्रेडेंशियल्स सहेजें (फ्यूचर API कॉल्स के लिए)
-    await saveStoreCredentialsToDB(storeHash, access_token); 
-
-    // B. Carrier Connection की जाँच करें और बनाएँ/अपडेट करें
-    await manageBcCarrierConnection(storeHash, access_token);
-
-    // C. सफलता पर App UI या डैशबोर्ड पर रीडायरेक्ट करें
-    console.log("✅ App installed and Carrier configured successfully!");
-    
-    // मर्चेंट को अपने App के UI में रीडायरेक्ट करें (उदाहरण के लिए /dashboard)
-    res.redirect(`${process.env.APP_URL}/dashboard?store_hash=${storeHash}`); 
-    // यदि आपके पास UI नहीं है, तो आप बस res.send("Success") कर सकते हैं
-    // res.send("✅ App installed successfully! You can close this window now.");
-
-  } catch (err) {
-    console.error("❌ App Installation/OAuth/Carrier Setup Error:", err.response?.data || err.message);
-    res.status(500).send("App Installation failed. Check server logs.");
-  }
+    console.log("✅ OAuth Token Received:", tokenResponse.data);
+    res.send("✅ App installed successfully! You can close this window now.");
+  } catch (err) {
+    console.error("❌ OAuth Error:", err.response?.data || err.message);
+    res.status(500).send("OAuth failed");
+  }
 });
-
 
 // ✅ 4️⃣ Uninstall callback
 app.post("/api/uninstall", (req, res) => {
