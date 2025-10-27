@@ -246,20 +246,17 @@ app.get("/api/check", (req, res) => {
 
 // ✅ Metadata endpoint (BigCommerce checks available countries/services)
 // ✅ Metadata endpoint (BigCommerce checks available countries/services) - REVISED
+// सुनिश्चित करें कि यह code deploy हो चुका है
 app.get("/api/metadata", (req, res) => {
-  console.log("✅ /api/metadata HIT - Including settings_url");
-  
-  const base_url = process.env.APP_URL; // सुनिश्चित करें कि यह आपका Render URL है
-
+  console.log("✅ /api/metadata HIT - Final version with check-v2");
+  const base_url = process.env.APP_URL; 
   res.status(200).json({
     carriers: [
       {
         carrier_id: "myrover",
         label: "MyRover Shipping",
         countries: ["CA"], 
-        // 🔑 MOST CRITICAL FIELD: BigCommerce को बताता है कि स्टेटस कहाँ चेक करें
-        settings_url: `${base_url}/api/check-v2`, 
-        // BC को बताता है कि दरें कहाँ से प्राप्त करें
+        settings_url: `${base_url}/api/check-v2`, // 🔑 New URL is here
         rates_url: `${base_url}/api/rates`, 
       },
     ],
