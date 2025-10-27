@@ -22,47 +22,55 @@ app.get("/", (req, res) => {
   console.log("✅ /api/auth/callback HIT");
   res.status(200).json({ message: "Auth callback received" });
 });*/
+app.get("/api/auth", async (req, res) => {
+    console.log("✅ OAuth Step 1 triggered", req.query);
+
+    const { context } = req.query;
+    if (!context) return res.status(400).send("❌ Missing store context");
+
+    const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
+    // Scopes को अपरिवर्तित रखा गया है (जो आपने पहले प्रदान किया था)
+    const scopes = "store_v2_orders store_v2_information store_v2_default"; 
+
+    const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(
+        redirectUri
+    )}&response_type=code&context=${context}`;
+
+    res.redirect(installUrl);
+});
+
+
+// 3️⃣ OAuth Step 2 - Callback from BigCommerce
 app.get("/api/auth/callback", async (req, res) => {
-  console.log("✅ /api/auth/callback HIT with query:", req.query);
+    console.log("✅ OAuth Callback triggered:", req.query);
 
-  const { code, context, scope } = req.query;
+    const { code, scope, context } = req.query;
+    if (!code) return res.status(400).send("❌ Missing OAuth code");
 
-  if (!code || !context) {
-    return res.status(400).send("❌ Missing required OAuth parameters.");
-  }
+    try {
+        const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
+            client_id: process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
+            redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
+            grant_type: "authorization_code",
+            code,
+            scope,
+            context,
+        });
 
-  try {
-    // BigCommerce OAuth exchange request
-    const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
-      client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
-      grant_type: "authorization_code",
-      code,
-      scope,
-      context,
-    });
+        console.log("✅ OAuth Token Received:", tokenResponse.data);
+        const { access_token, context: storeHash } = tokenResponse.data;
 
-    console.log("🔑 BigCommerce Token Response:", tokenResponse.data);
+        // ❌ Carrier Management हटा दिया गया क्योंकि यह 404 दे रहा था
+        // await manageBcCarrierConnection(storeHash.replace('stores/', ''), access_token); 
 
-    const { access_token, store_hash, user } = tokenResponse.data;
-    console.log("✅ Access Token:", access_token);
-    console.log("🏬 Store Hash:", store_hash);
-    console.log("👤 User Info:", user);
+        await saveStoreCredentialsToDB(storeHash.replace('stores/', ''), access_token);
 
-    // 👉 यहां तुम इसे DB में save कर सकते हो
-    // await saveToDB(store_hash, access_token);
-
-    res.send(`
-      <h2>✅ MyRover App Installed Successfully!</h2>
-      <p><b>Store Hash:</b> ${store_hash}</p>
-      <p><b>Access Token:</b> ${access_token}</p>
-      <p><b>Scope:</b> ${scope}</p>
-    `);
-  } catch (err) {
-    console.error("❌ OAuth Error:", err.response?.data || err.message);
-    res.status(500).send("OAuth exchange failed. Check Render logs for details.");
-  }
+        res.send("✅ App installed successfully! You can close this window now.");
+    } catch (err) {
+        console.error("❌ OAuth Error:", err.response?.data || err.message);
+        res.status(500).send(`OAuth failed: ${err.response?.data?.error_description || err.message}`);
+    }
 });
 
 // 🟣 Load callback (BigCommerce admin load)
