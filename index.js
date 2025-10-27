@@ -146,7 +146,7 @@ app.get("/api/auth/callback", async (req, res) => {
 
   } catch (err) {
     console.error("❌ App Installation/OAuth/Carrier Setup Error:", err.response?.data || err.message);
-    res.status(500).send("App Installation failed. Check server logs.", client_id);
+    res.status(500).send("App Installation failed. Check server logs.");
   }
 });
 
