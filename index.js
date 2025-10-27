@@ -1,53 +1,126 @@
 import express from "express";
+import dotenv from "dotenv";
 import cors from "cors";
-import bodyParser from "body-parser";
 
+dotenv.config();
 const app = express();
+app.use(express.json());
 app.use(cors());
-app.use(bodyParser.json());
 
-/* ✅ Home route */
+const PORT = process.env.PORT || 10000;
+const BASE_URL = process.env.BASE_URL || "https://myrover-carrier.onrender.com";
+const MY_CARRIER_ID = "myrover_shipping";
+const MY_DISPLAY_NAME = "MyRover Shipping";
+
+// 🟢 Root route
 app.get("/", (req, res) => {
-  res.send("🚀 MyRover Carrier App is running!");
+  res.status(200).send("✅ MyRover Carrier App is running");
 });
 
-/* ✅ Account Status Check (for BigCommerce carrier test) */
+// 🟣 Auth callback (BigCommerce → App)
+app.get("/api/auth/callback", (req, res) => {
+  console.log("✅ /api/auth/callback HIT");
+  res.status(200).json({ message: "Auth callback received" });
+});
+
+// 🟣 Load callback (BigCommerce admin load)
+app.get("/api/load", (req, res) => {
+  console.log("✅ /api/load HIT");
+  res.status(200).json({ message: "App loaded successfully" });
+});
+
+// 🟣 Uninstall callback
+app.post("/api/uninstall", (req, res) => {
+  console.log("✅ /api/uninstall HIT");
+  res.status(200).json({ message: "App uninstalled successfully" });
+});
+
+// 🟣 Metadata endpoint (register carrier)
+app.get("/api/metadata", (req, res) => {
+  console.log("✅ /api/metadata HIT: Sending Carrier Metadata");
+
+  const base_url = process.env.APP_URL;
+
+  res.status(200).json({
+    data: {
+      carriers: [
+        {
+          id: "myrover",
+          name: "MyRover Shipping",
+          label: "MyRover Shipping",
+          countries: ["CA"],
+          settings_url: `${base_url}/api/check`,
+          connection_form: {
+            properties: []
+          },
+          rate_provider: {
+            type: "external",
+            url: `${base_url}/api/rates`
+          }
+        }
+      ]
+    }
+  });
+});
+
+
+
+// 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
   console.log("Headers:", JSON.stringify(req.headers, null, 2));
   console.log("Body:", JSON.stringify(req.body, null, 2));
 
-  return res.json({
+  const responseData = {
     data: {
-      account_status: "active",
+      id: "myrover",
+      name: "MyRover Shipping",
+      status: "OK",
       connected: true,
-      message: "Connection verified successfully",
-    },
-  });
+      account_status: "active",
+      message: "Connection verified successfully"
+    }
+  };
+
+  console.log("🚀 Sending Response:", JSON.stringify(responseData, null, 2));
+  res.status(200).json(responseData);
 });
 
-/* ✅ OAuth Callback Route (Fix) */
-app.get("/api/auth/callback", async (req, res) => {
-  console.log("✅ /api/auth/callback HIT");
-  console.log("Query Params:", req.query);
 
-  const { code, context, scope } = req.query;
 
-  if (!code) {
-    return res.status(400).send("❌ Missing authorization code");
-  }
 
-  // Normally, you’d exchange this code for an access token here
-  // but for now just confirm it’s working
-  res.send(`
-    <h2>✅ Authorization Successful!</h2>
-    <p>Code: ${code}</p>
-    <p>Context: ${context}</p>
-    <p>Scope: ${scope}</p>
-    <p>You can now close this window.</p>
-  `);
+
+
+
+
+// 🟣 Rates endpoint (for shipping quote calculation)
+app.post("/api/rates", (req, res) => {
+  console.log("✅ /api/rates HIT");
+
+  const { origin, destination, packages } = req.body;
+  console.log("📦 Request Body:", JSON.stringify(req.body, null, 2));
+
+  // Basic rate example (static for now)
+  const response = {
+    data: {
+      rates: [
+        {
+          carrier_id: MY_CARRIER_ID,
+          carrier_name: MY_DISPLAY_NAME,
+          service_code: "MYROVER_EXPRESS",
+          service_name: "MyRover Express",
+          cost: 12.5,
+          transit_time: "2-3 days",
+          currency: "CAD"
+        }
+      ]
+    }
+  };
+
+  res.status(200).json(response);
 });
 
-/* ✅ Start server */
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// 🟣 Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
