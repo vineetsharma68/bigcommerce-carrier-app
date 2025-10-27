@@ -280,20 +280,30 @@ const crypto = require('crypto');
 function verifySignedRequest(signedPayload, clientSecret) {
     if (!signedPayload || !clientSecret) return false;
 
-    // Payload दो भागों में विभाजित होता है: हस्ताक्षर (signature) और डेटा (data)
     const parts = signedPayload.split('.');
     if (parts.length !== 2) return false;
 
-    const signature = Buffer.from(parts[0], 'base64').toString('hex');
-    const data = parts[1];
+    // 🔑 BigCommerce के Base64URL को मानक Base64 में बदलें (URL Safe)
+    const urlSafeData = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const urlSafeSignature = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+
+    const signature = Buffer.from(urlSafeSignature, 'base64').toString('hex');
+    const data = Buffer.from(urlSafeData, 'base64').toString('utf8'); // डेटा को utf8 के रूप में डिकोड करें
 
     // अपेक्षित हस्ताक्षर (Expected Signature) की गणना
     const expectedSignature = crypto
         .createHmac('sha256', clientSecret)
-        .update(data)
+        .update(parts[1]) // मूल, असंशोधित डेटा भाग का उपयोग करें
         .digest('hex');
+        
+    // एक और दुर्लभ समस्या: कुछ कार्यान्वयन पूरे 'भागों' का उपयोग करते हैं
+    // .update(parts[1]) के बजाय .update(parts[0] + '.' + parts[1]) का प्रयास करें यदि उपर्युक्त विफल हो
 
-    // हस्ताक्षर का मिलान (Compare the signatures)
+    // 🔑 लॉग में दोनों Signature देखें
+    console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
+    console.log(`DEBUG: Incoming Signature: ${signature}`);
+
+
     return expectedSignature === signature;
 }
 
