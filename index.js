@@ -36,34 +36,30 @@ function verifySignedRequest(signedPayload, clientSecret) {
     const signaturePart = parts[0];
     const dataPart = parts[1];
     const trimmedSecret = clientSecret.trim(); 
-
-    // 1. हस्ताक्षर (Signature) को Hex में बदलें (भाग 0)
-    // URL-Safe Base64 को मानक Base64 में बदलें
-    const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
     
-    // 🔑 Fix: Buffer.from('base64') का परिणाम वह Buffer होता है जिसमें 
-    // वास्तव में हस्ताक्षर होता है। हमें इसे फिर से Hex में बदलने की आवश्यकता नहीं है।
-    // यहाँ हम सीधे Base64 डिकोडेड Buffer से तुलना करेंगे या 
-    // डिकोड करके Hex में बदलेंगे।
-    
-    // यह Line पिछले सभी Log को दिखा रही थी। इसे ठीक करने का प्रयास:
-    const incomingSignature = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
-    
-    // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें (भाग 1)
+    // --- 1. Calculate Expected Signature ---
     const expectedSignature = crypto
         .createHmac('sha256', trimmedSecret) 
         .update(dataPart) 
         .digest('hex');
     
+    // --- 2. Decode Incoming Signature ---
+    // Make URL-safe Base64 standard Base64
+    const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // 🔑 Fix: Decode the signature into its raw Buffer form.
+    const incomingSignatureBuffer = Buffer.from(base64UrlSafeSignature, 'base64');
+    
+    // 🔑 Convert the incoming Buffer to Hex for logging and comparison
+    const incomingSignatureHex = incomingSignatureBuffer.toString('hex');
+    
     // DEBUG logs
     console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
-    
-    // 🔑 New Debug Log: देखें कि Buffer वास्तव में क्या डिकोड कर रहा है (अब यह सही हस्ताक्षर होना चाहिए)
-    const incomingSignatureCheck = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
-    console.log(`DEBUG: Incoming Signature (Check): ${incomingSignatureCheck}`);
+    console.log(`DEBUG: Incoming Signature (Hex): ${incomingSignatureHex}`);
 
-    // 4. तुलना करें
-    return expectedSignature === incomingSignatureCheck;
+    // 3. Comparison
+    // We compare the Hex strings.
+    return expectedSignature === incomingSignatureHex;
 }
 // ------------------------------------
 /**
