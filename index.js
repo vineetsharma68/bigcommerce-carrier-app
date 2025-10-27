@@ -37,7 +37,9 @@ app.post("/api/uninstall", (req, res) => {
 
 // 🟣 Metadata endpoint (register carrier)
 app.get("/api/metadata", (req, res) => {
-  console.log("✅ /api/metadata HIT");
+  console.log("✅ /api/metadata HIT: Sending Carrier Metadata");
+
+  const base_url = process.env.APP_URL;
 
   res.status(200).json({
     data: {
@@ -45,14 +47,15 @@ app.get("/api/metadata", (req, res) => {
         {
           carrier_id: MY_CARRIER_ID,
           label: MY_DISPLAY_NAME,
-          countries: ["CA"],
-          settings_url: `${BASE_URL}/api/check`,
-          rates_url: `${BASE_URL}/api/rates`
+          countries: ["CA", "US"],
+          settings_url: `${base_url}/api/check`,
+          rates_url: `${base_url}/api/rates`
         }
       ]
     }
   });
 });
+
 
 // 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
