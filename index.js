@@ -230,8 +230,8 @@ app.get("/api/load", (req, res) => {
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status) - FINAL TEST
 // POST method (जो आपके logs में दिख रहा है)
-app.post("/api/check-v2", (req, res) => {
-  console.log("✅ /api/check-v2 HIT");
+app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT");
   return res.status(200).json({ status: "active" });
 });
 
