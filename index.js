@@ -236,7 +236,7 @@ app.post("/api/check-v2", (req, res) => {
 });
 
 // GET method (एक अतिरिक्त जाँच के रूप में, यदि BC गुप्त रूप से GET की अपेक्षा कर रहा हो)
-app.get("/api/check", (req, res) => {
+app.get("/api/check-v2", (req, res) => {
   console.log("⚠️ /api/check HIT (GET) - Testing alternative method");
   return res.status(200).json({ 
     status: "active" 
