@@ -275,9 +275,17 @@ app.get("/api/load", (req, res) => {
 
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
-app.post("/api/check", (req, res) => {
+/*app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT");
   return res.status(200).json({ status: "active" });
+});*/
+app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT: Sending status: active");
+  
+  // 🔑 सबसे महत्वपूर्ण: 200 OK स्टेटस और केवल टॉप-लेवल JSON
+  return res.status(200).json({ 
+    status: "active" 
+  });
 });
 
 
