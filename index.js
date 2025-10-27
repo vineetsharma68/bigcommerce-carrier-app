@@ -33,15 +33,20 @@ function verifySignedRequest(signedPayload, clientSecret) {
     const parts = signedPayload.split('.');
     if (parts.length !== 2) return false;
 
-    const signaturePart = parts[0]; // यह हस्ताक्षर है
-    const dataPart = parts[1];      // यह डेटा है
+    const signaturePart = parts[0];
+    const dataPart = parts[1];
     const trimmedSecret = clientSecret.trim(); 
 
     // 1. हस्ताक्षर (Signature) को Hex में बदलें (भाग 0)
     // URL-Safe Base64 को मानक Base64 में बदलें
     const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
     
-    // 🔑 Incoming Signature को signaturePart (भाग 0) से डिकोड करें
+    // 🔑 Fix: Buffer.from('base64') का परिणाम वह Buffer होता है जिसमें 
+    // वास्तव में हस्ताक्षर होता है। हमें इसे फिर से Hex में बदलने की आवश्यकता नहीं है।
+    // यहाँ हम सीधे Base64 डिकोडेड Buffer से तुलना करेंगे या 
+    // डिकोड करके Hex में बदलेंगे।
+    
+    // यह Line पिछले सभी Log को दिखा रही थी। इसे ठीक करने का प्रयास:
     const incomingSignature = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
     
     // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें (भाग 1)
@@ -52,10 +57,13 @@ function verifySignedRequest(signedPayload, clientSecret) {
     
     // DEBUG logs
     console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
-    console.log(`DEBUG: Incoming Signature (Decoded): ${incomingSignature}`); // Log में सुधार
-    // console.log(`DEBUG: Incoming Data Part: ${dataPart}`); // यह Base64URL स्ट्रिंग होनी चाहिए
+    
+    // 🔑 New Debug Log: देखें कि Buffer वास्तव में क्या डिकोड कर रहा है (अब यह सही हस्ताक्षर होना चाहिए)
+    const incomingSignatureCheck = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
+    console.log(`DEBUG: Incoming Signature (Check): ${incomingSignatureCheck}`);
 
-    return expectedSignature === incomingSignature;
+    // 4. तुलना करें
+    return expectedSignature === incomingSignatureCheck;
 }
 // ------------------------------------
 /**
