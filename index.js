@@ -346,9 +346,10 @@ app.get("/api/load", (req, res) => {
 // 9️⃣ Account verification (Configuration URL)
 app.post("/api/check", (req, res) => {
     console.log("✅ /api/check HIT: Account Status Check");
-    // "Error getting account status" को हल करने के लिए निश्चित प्रतिक्रिया
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.status(200).json({ status: "active" });
+    
+    // Use the simplest possible valid response to guarantee success
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
+    return res.status(200).json({ status: "active" }); // The required structure
 });
 
 
