@@ -183,22 +183,32 @@ app.get("/api/test-myrover", async (req, res) => {
 
 
 // Load Callback
-/*app.get("/api/load", (req, res) => {
-  res.send("🚀 App loaded inside BigCommerce Control Panel!");
-});*/
+// ✅ Load Callback - REVISED for simplicity
 app.get("/api/load", (req, res) => {
-  console.log("✅ /api/load HIT");
+  console.log("✅ /api/load HIT");
 
-  res.setHeader("Content-Type", "application/json");
-  res.status(200).send(JSON.stringify({
-    data: {
-      app_id: "myrover_carrier",
-      name: "MyRover Shipping",
-      regions: ["CA"],       // Supported countries
-      settings: {}           // Optional settings
-    }
-  }));
+  res.status(200).json({
+    // For carrier apps, sometimes just a simple message is enough for loading the app iframe.
+    // If BigCommerce expects a config payload here, it's safer to follow their exact docs.
+    // For now, let's keep the content-type correct.
+    message: "App loaded successfully",
+    // For a shipping app's load URL, it should typically render the app's UI/settings page, 
+    // not just a JSON response like this, unless it's a non-UI service app.
+  });
 });
+/*app.get("/api/load", (req, res) => {
+  console.log("✅ /api/load HIT");
+
+  res.setHeader("Content-Type", "application/json");
+  res.status(200).send(JSON.stringify({
+    data: {
+      app_id: "myrover_carrier",
+      name: "MyRover Shipping",
+      regions: ["CA"],       // Supported countries
+      settings: {}           // Optional settings
+    }
+  }));
+});*/
 
 
 
@@ -209,16 +219,28 @@ app.get("/api/load", (req, res) => {
 
 
 // ✅ Account verification (used by BigCommerce to check status)
+/*app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT - Sending status: active");
+
+  // BigCommerce expects a simple JSON object for status check
+  res.status(200).json({ 
+    status: "active" 
+  });
+});*/
+
+// ✅ Account verification (used by BigCommerce to check status) - FINAL REVISION
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
+  console.log("✅ /api/check HIT");
+  
+  // 🔑 सबसे महत्वपूर्ण: BigCommerce द्वारा भेजे गए data (Auth/Headers) को लॉग करें।
+  console.log("Request Headers:", req.headers);
+  console.log("Request Body:", req.body); 
 
-  res.setHeader("Content-Type", "application/json");
-  res.status(200).send(JSON.stringify({
-    data: { status: "active" }
-  }));
+  // BigCommerce केवल status: active की अपेक्षा करता है।
+  res.status(200).json({ 
+    status: "active" 
+  });
 });
-
-
 // ✅ Metadata endpoint (BigCommerce checks available countries/services)
 app.get("/api/metadata", (req, res) => {
   console.log("✅ /api/metadata HIT");
