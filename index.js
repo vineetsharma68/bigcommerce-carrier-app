@@ -229,19 +229,17 @@ app.get("/api/load", (req, res) => {
 });*/
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status) - FINAL TEST
-// POST method (क्योंकि लॉग्स ने इसकी पुष्टि की है)
+// POST method (जो आपके logs में दिख रहा है)
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT - Sending simple status: active");
-
-  // कोई और हेडर या लॉजिक नहीं, केवल अपेक्षित प्रतिक्रिया
+  console.log("✅ /api/check HIT (POST)");
   return res.status(200).json({ 
     status: "active" 
   });
 });
 
-// GET method (सिर्फ एक चेक के रूप में, यदि BigCommerce POST में विफल हो रहा है)
+// GET method (एक अतिरिक्त जाँच के रूप में, यदि BC गुप्त रूप से GET की अपेक्षा कर रहा हो)
 app.get("/api/check", (req, res) => {
-  console.log("⚠️ /api/check HIT (via GET) - Sending simple status: active");
+  console.log("⚠️ /api/check HIT (GET) - Testing alternative method");
   return res.status(200).json({ 
     status: "active" 
   });
