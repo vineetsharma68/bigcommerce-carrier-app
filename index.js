@@ -21,18 +21,27 @@ const MY_DISPLAY_NAME = "MyRover Shipping";
 /**
  * BigCommerce signed_payload को वेरिफाई करने के लिए (पिछले त्रुटियों को ठीक किया गया)
  */
+// आपका पुराना Log:
+// DEBUG: Incoming Signature: 7b2275736572223a... 
+
+// यह भाग 1 (डेटा) को Hex के रूप में दिखाता है, जो गलत है।
+
+// --- केवल इस फ़ंक्शन को बदलें ---
 function verifySignedRequest(signedPayload, clientSecret) {
     if (!signedPayload || !clientSecret) return false;
 
     const parts = signedPayload.split('.');
     if (parts.length !== 2) return false;
 
-    const signaturePart = parts[0];
-    const dataPart = parts[1];
+    const signaturePart = parts[0]; // यह हस्ताक्षर है
+    const dataPart = parts[1];      // यह डेटा है
     const trimmedSecret = clientSecret.trim(); 
 
     // 1. हस्ताक्षर (Signature) को Hex में बदलें (भाग 0)
+    // URL-Safe Base64 को मानक Base64 में बदलें
     const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // 🔑 Incoming Signature को signaturePart (भाग 0) से डिकोड करें
     const incomingSignature = Buffer.from(base64UrlSafeSignature, 'base64').toString('hex');
     
     // 2. अपेक्षित हस्ताक्षर (Expected Signature) की गणना करें (भाग 1)
@@ -43,11 +52,12 @@ function verifySignedRequest(signedPayload, clientSecret) {
     
     // DEBUG logs
     console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
-    console.log(`DEBUG: Incoming Signature: ${incomingSignature}`);
+    console.log(`DEBUG: Incoming Signature (Decoded): ${incomingSignature}`); // Log में सुधार
+    // console.log(`DEBUG: Incoming Data Part: ${dataPart}`); // यह Base64URL स्ट्रिंग होनी चाहिए
 
     return expectedSignature === incomingSignature;
 }
-
+// ------------------------------------
 /**
  * Checks for and registers/updates the Carrier Object in BigCommerce.
  * ❌ NOTE: इसे अब 'api/auth/callback' में कॉल नहीं किया जाता है क्योंकि यह 404 दे रहा था।
