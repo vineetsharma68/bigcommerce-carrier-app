@@ -300,50 +300,38 @@ function verifySignedRequest(signedPayload, clientSecret) {
 // -------------------------------------------------------------
 // ✅ Load Callback (जब उपयोगकर्ता App Launch पर क्लिक करता है)
 // -------------------------------------------------------------
+// ... (crypto और verifySignedRequest फ़ंक्शन को अपरिवर्तित रखें)
+
 app.get("/api/load", (req, res) => {
     console.log("✅ /api/load HIT");
 
     const signedPayload = req.query.signed_payload;
     const clientSecret = process.env.CLIENT_SECRET;
 
+    // 🔑 DEBUGGING STEP 1: Secret और Payload की लंबाई जाँचें
+    console.log(`DEBUG: Client Secret Length: ${clientSecret ? clientSecret.length : 'NULL'}`);
+    console.log(`DEBUG: Signed Payload Length: ${signedPayload ? signedPayload.length : 'NULL'}`);
+    
+    // यह सुनिश्चित करने के लिए कि कोई छिपा हुआ स्पेस नहीं है
+    const trimmedSecret = clientSecret ? clientSecret.trim() : null;
+    console.log(`DEBUG: Trimmed Secret Length: ${trimmedSecret ? trimmedSecret.length : 'NULL'}`);
+
+
     if (!signedPayload) {
-        console.error("❌ Load Error: Missing signed_payload");
-        // यदि payload नहीं है, तो BigCommerce को 400 भेजें
         return res.status(400).send("Bad Request: Missing signed_payload parameter.");
     }
     
-    // 🔑 signed_payload का सत्यापन (Verification)
-    if (!verifySignedRequest(signedPayload, clientSecret)) {
+    // 🔑 Trimmed Secret का उपयोग करके वेरिफिकेशन का प्रयास करें
+    if (!verifySignedRequest(signedPayload, trimmedSecret)) {
         console.error("❌ Load Error: Invalid signed_payload signature!");
-        // सत्यापन विफल होने पर 401 Unauthorized भेजें
+        // ❌ यदि यह यहां फेल होता है, तो 99.9% CLIENT_SECRET गलत है।
         return res.status(401).send("Unauthorized: Invalid request signature.");
     }
 
-    // सत्यापन सफल रहा! अब हम app UI (या सफलता संदेश) लोड कर सकते हैं।
     console.log("✅ Load Verification Successful. Sending success HTML.");
 
-    // कैरियर सर्विस ऐप के लिए एक सरल HTML प्रतिक्रिया
-    res.status(200).send(`
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <title>MyRover Configuration</title>
-          <style>body { font-family: Arial, sans-serif; padding: 20px; background-color: #f0f2f5; }</style>
-      </head>
-      <body>
-          <h1>🚀 MyRover Carrier App</h1>
-          <p>Configuration panel loaded successfully inside BigCommerce. You can now configure your shipping settings.</p>
-          <p>Please navigate back to Shipping settings to connect your real-time quotes.</p>
-      </body>
-      </html>
-    `);
+    // ... (HTML response code जारी रखें)
 });
-
-// सुनिश्चित करें कि आपने अपने कोड में crypto मॉड्यूल को require किया है:
-// const crypto = require('crypto');
-// -------------------------------------------------------------
-
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
 /*app.post("/api/check", (req, res) => {
