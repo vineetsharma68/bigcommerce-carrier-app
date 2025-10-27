@@ -56,16 +56,23 @@ app.get("/api/metadata", (req, res) => {
 
 // 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
-    console.log("✅ /api/check HIT: Account Status Check");
+  console.log("✅ /api/check HIT: Account Status Check");
 
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.status(200).json({
-        data: {
-            status: "OK",
-            account_status: "active"
-        }
-    });
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+  const response = {
+    data: {
+      status: "OK",
+      account_status: "active",
+      message: "Connection verified successfully"
+    }
+  };
+
+  console.log("Sending Response:", response);
+  res.status(200).json(response);
 });
+
 
 
 // 🟣 Rates endpoint (for shipping quote calculation)
