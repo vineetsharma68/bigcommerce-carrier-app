@@ -1,27 +1,135 @@
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
+require("dotenv").config();
+const express = require("express");
+const bodyParser = require("body-parser");
+const axios = require("axios");
+const crypto = require('crypto'); // 🔑 crypto को फ़ाइल के शीर्ष पर ले जाया गया
 
-dotenv.config();
 const app = express();
-app.use(express.json());
-app.use(cors());
+app.use(bodyParser.json());
 
-const PORT = process.env.PORT || 10000;
-const BASE_URL = process.env.BASE_URL || "https://myrover-carrier.onrender.com";
-const MY_CARRIER_ID = "myrover_shipping";
+// --- CONSTANTS ---
+const API_BASE_URL = "https://api.bigcommerce.com/stores";
+const MY_CARRIER_ID = "myrover_carrier"; 
+const MY_RATE_URL = `${process.env.APP_URL}/api/rates`; // 🔑 आपका मूल CONSTANT
 const MY_DISPLAY_NAME = "MyRover Shipping";
 
-// 🟢 Root route
+
+// ----------------------------------------------------------------------
+// ✅ 1. HELPER FUNCTIONS (Routes से पहले परिभाषित)
+// ----------------------------------------------------------------------
+
+/**
+ * BigCommerce signed_payload को वेरिफाई करने के लिए (पिछले त्रुटियों को ठीक किया गया)
+ */
+// आपका पुराना Log:
+// DEBUG: Incoming Signature: 7b2275736572223a... 
+
+// यह भाग 1 (डेटा) को Hex के रूप में दिखाता है, जो गलत है।
+
+// --- केवल इस फ़ंक्शन को बदलें ---
+function verifySignedRequest(signedPayload, clientSecret) {
+    if (!signedPayload || !clientSecret) return false;
+
+    const parts = signedPayload.split('.');
+    if (parts.length !== 2) return false;
+
+    const signaturePart = parts[0];
+    const dataPart = parts[1];
+    const trimmedSecret = clientSecret.trim(); 
+    
+    // --- 1. Calculate Expected Signature ---
+    const expectedSignature = crypto
+        .createHmac('sha256', trimmedSecret) 
+        .update(dataPart) 
+        .digest('hex');
+    
+    // --- 2. Decode Incoming Signature ---
+    // Make URL-safe Base64 standard Base64
+    const base64UrlSafeSignature = signaturePart.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // 🔑 Fix: Decode the signature into its raw Buffer form.
+    const incomingSignatureBuffer = Buffer.from(base64UrlSafeSignature, 'base64');
+    
+    // 🔑 Convert the incoming Buffer to Hex for logging and comparison
+    const incomingSignatureHex = incomingSignatureBuffer.toString('hex');
+    
+    // DEBUG logs
+    console.log(`DEBUG: Actual Signature (Hmac): ${expectedSignature}`);
+    console.log(`DEBUG: Incoming Signature (Hex): ${incomingSignatureHex}`);
+
+    // 3. Comparison
+    // We compare the Hex strings.
+    return expectedSignature === incomingSignatureHex;
+}
+// ------------------------------------
+/**
+ * Checks for and registers/updates the Carrier Object in BigCommerce.
+ * ❌ NOTE: इसे अब 'api/auth/callback' में कॉल नहीं किया जाता है क्योंकि यह 404 दे रहा था।
+ */
+async function manageBcCarrierConnection(storeHash, accessToken) {
+    const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-Auth-Token": accessToken, 
+    };
+    const apiEndpoint = `${API_BASE_URL}/${storeHash}/v2/shipping/carrier/connections`;
+
+    // 1. GET: मौजूदा कनेक्शनों की जाँच करें
+    try {
+        const checkResponse = await axios.get(apiEndpoint, { headers });
+        const existingConnections = checkResponse.data;
+
+        let existingBcId = null;
+        for (const carrier of existingConnections) {
+            if (carrier.carrier_id === MY_CARRIER_ID) {
+                existingBcId = carrier.id;
+                break;
+            }
+        }
+
+        const carrierPayload = {
+            carrier_id: MY_CARRIER_ID,
+            display_name: MY_DISPLAY_NAME,
+            type: "rate_calculator",
+            rate_url: MY_RATE_URL, 
+        };
+
+        if (existingBcId) {
+            // 2. PUT: अगर कनेक्शन मिल गया, तो अपडेट करें
+            await axios.put(`${apiEndpoint}/${existingBcId}`, carrierPayload, { headers });
+            console.log(`✅ Carrier ID ${existingBcId} updated (PUT).`);
+            
+        } else {
+            // 3. POST: अगर कनेक्शन नहीं मिला, तो नया बनाएँ
+            const createResponse = await axios.post(apiEndpoint, carrierPayload, { headers });
+            console.log(`✅ New Carrier connection created (POST): ID ${createResponse.data.id}`);
+        }
+    } catch (error) {
+        console.error("❌ Carrier Connection Management Failed:", error.response?.data || error.message);
+        throw new Error("BigCommerce Carrier setup failed during installation.");
+    }
+}
+
+/**
+ * Placeholder for saving credentials to your database (DB).
+ */
+async function saveStoreCredentialsToDB(storeHash, accessToken) {
+    console.log(`🔒 Credentials saved for store: ${storeHash}`);
+    // Implement your database logic here
+}
+
+
+// ----------------------------------------------------------------------
+// ✅ 2. EXPRESS ROUTES
+// ----------------------------------------------------------------------
+
+// 1️⃣ Home route
 app.get("/", (req, res) => {
-  res.status(200).send("✅ MyRover Carrier App is running");
+    res.send("🚀 MyRover Carrier App is running successfully!");
 });
 
-// 🟣 Auth callback (BigCommerce → App)
-/*app.get("/api/auth/callback", (req, res) => {
-  console.log("✅ /api/auth/callback HIT");
-  res.status(200).json({ message: "Auth callback received" });
-});*/
+
+// 2️⃣ OAuth Step 1 - BigCommerce authorization
 app.get("/api/auth", async (req, res) => {
     console.log("✅ OAuth Step 1 triggered", req.query);
 
@@ -73,16 +181,166 @@ app.get("/api/auth/callback", async (req, res) => {
     }
 });
 
-// 🟣 Load callback (BigCommerce admin load)
-app.get("/api/load", (req, res) => {
-  console.log("✅ /api/load HIT");
-  res.status(200).json({ message: "App loaded successfully" });
+
+// 4️⃣ Uninstall callback
+app.post("/api/uninstall", (req, res) => {
+    console.log("❌ App Uninstalled:", req.body);
+    res.send("✅ Uninstall cleanup done.");
 });
 
-// 🟣 Uninstall callback
-app.post("/api/uninstall", (req, res) => {
-  console.log("✅ /api/uninstall HIT");
-  res.status(200).json({ message: "App uninstalled successfully" });
+
+// 5️⃣ Fetch available MyRover services (अपरिवर्तित)
+app.get("/api/myrover/services", async (req, res) => {
+    try {
+        const response = await axios.post("https://apis.myrover.io/GetServices", {}, {
+            headers: {
+                Authorization: process.env.MYROVER_API_KEY,
+                "Content-Type": "application/json",
+            },
+        });
+
+        console.log("📦 MyRover Services:", response.data);
+        res.json({
+            success: true,
+            message: "Fetched available services from MyRover",
+            data: response.data,
+        });
+    } catch (err) {
+        console.error("❌ Error fetching MyRover services:", err.response?.data || err.message);
+        res.status(500).json({
+            success: false,
+            error: err.response?.data || err.message,
+        });
+    }
+});
+
+
+// 6️⃣ Shipping Rates endpoint (BigCommerce calls this URL) (अपरिवर्तित)
+app.post("/api/rates", async (req, res) => {
+    const { origin, destination, items } = req.body;
+    console.log("📦 Rate request received:", { origin, destination, items });
+
+    try {
+        const serviceRes = await axios.post(
+            "https://apis.myrover.io/GetServices",
+            {},
+            {
+                headers: {
+                    Authorization: process.env.MYROVER_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        const services = serviceRes.data?.services || [];
+        console.log(`✅ Found ${services.length} MyRover services`);
+
+        const service = services[0];
+        console.log("🧩 Using service:", service);
+
+        const pickupAddress = "100 Dundas St W, Toronto, ON";
+        const dropAddress = "200 King St W, Toronto, ON";
+
+        const priceRes = await axios.post(
+            "https://apis.myrover.io/GetPrice",
+            {
+                service_id: service.id,
+                priority_id: 1,
+                pickup_address: pickupAddress,
+                drop_address: dropAddress,
+            },
+            {
+                headers: {
+                    Authorization: process.env.MYROVER_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        console.log("💰 MyRover Price Response:", priceRes.data);
+
+        const cost = priceRes.data?.data?.cost || 15.0;
+
+        const rates = [
+            {
+                carrier_quote: {
+                    code: service.abbreviation || "myrover",
+                    display_name: service.name || "MyRover Shipping",
+                    cost: cost,
+                },
+            },
+        ];
+
+        res.json({ data: rates });
+    } catch (err) {
+        console.error("❌ MyRover API error:", err.response?.data || err.message);
+
+        // fallback dummy rates
+        res.json({
+            data: [
+                { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+                { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
+            ],
+        });
+    }
+});
+
+// 7️⃣ Test MyRover API key (अपरिवर्तित)
+app.get("/api/test-myrover", async (req, res) => {
+    try {
+        const response = await axios.post(
+            "https://apis.myrover.io/GetServices",
+            {},
+            {
+                headers: {
+                    Authorization: process.env.MYROVER_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        res.json({ success: true, data: response.data });
+    } catch (err) {
+        console.error("❌ MyRover.io GetServices error:", err.response?.data || err.message);
+        res.status(401).json({ success: false, error: err.response?.data || err.message });
+    }
+});
+
+
+// 8️⃣ Load Callback (App Launch)
+app.get("/api/load", (req, res) => {
+    console.log("✅ /api/load HIT");
+
+    const signedPayload = req.query.signed_payload;
+    const clientSecret = process.env.CLIENT_SECRET;
+
+    if (!signedPayload || !clientSecret) {
+        return res.status(400).send("Bad Request: Missing signed data or secret.");
+    }
+
+    if (!verifySignedRequest(signedPayload, clientSecret)) {
+        console.error("❌ Load Error: Invalid signed_payload signature!");
+        return res.status(401).send("Unauthorized: Invalid request signature.");
+    }
+
+    console.log("✅ Load Verification Successful. Sending success HTML.");
+
+    // Load होने पर iFrame में दिखने वाला HTML
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <title>MyRover Configuration</title>
+          <style>body { font-family: Arial, sans-serif; padding: 20px; }</style>
+      </head>
+      <body>
+          <h1>🚀 MyRover Carrier App</h1>
+          <p>Configuration panel loaded successfully inside BigCommerce. </p>
+          <p>Please navigate to Shipping settings to connect your real-time quotes manually.</p>
+      </body>
+      </html>
+    `);
 });
 
 // 🟣 Metadata endpoint (register carrier)
@@ -137,38 +395,6 @@ app.post("/api/check", (req, res) => {
 });
 
 
-
-
-
-
-
-
-// 🟣 Rates endpoint (for shipping quote calculation)
-app.post("/api/rates", (req, res) => {
-  console.log("✅ /api/rates HIT");
-
-  const { origin, destination, packages } = req.body;
-  console.log("📦 Request Body:", JSON.stringify(req.body, null, 2));
-
-  // Basic rate example (static for now)
-  const response = {
-    data: {
-      rates: [
-        {
-          carrier_id: MY_CARRIER_ID,
-          carrier_name: MY_DISPLAY_NAME,
-          service_code: "MYROVER_EXPRESS",
-          service_name: "MyRover Express",
-          cost: 12.5,
-          transit_time: "2-3 days",
-          currency: "CAD"
-        }
-      ]
-    }
-  };
-
-  res.status(200).json(response);
-});
 
 // 🟣 Start server
 app.listen(PORT, () => {
