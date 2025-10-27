@@ -344,13 +344,22 @@ app.get("/api/load", (req, res) => {
 });
 
 // 9️⃣ Account verification (Configuration URL)
+// 9️⃣ Account verification (Configuration URL)
 app.post("/api/check", (req, res) => {
     console.log("✅ /api/check HIT: Account Status Check");
-    
-    // Use the simplest possible valid response to guarantee success
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); 
-    return res.status(200).json({ status: "active" }); // The required structure
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    return res.status(200).json({
+        data: {
+            status: "active"
+        }
+    });
 });
+
 
 
 // 10️⃣ Metadata endpoint
