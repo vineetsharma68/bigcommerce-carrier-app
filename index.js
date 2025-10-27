@@ -45,11 +45,18 @@ app.get("/api/metadata", (req, res) => {
     data: {
       carriers: [
         {
-          carrier_id: MY_CARRIER_ID,
-          label: MY_DISPLAY_NAME,
-          countries: ["CA", "US"],
+          id: "myrover",
+          name: "MyRover Shipping",
+          label: "MyRover Shipping",
+          countries: ["CA"],
           settings_url: `${base_url}/api/check`,
-          rates_url: `${base_url}/api/rates`
+          connection_form: {
+            properties: []
+          },
+          rate_provider: {
+            type: "external",
+            url: `${base_url}/api/rates`
+          }
         }
       ]
     }
@@ -57,24 +64,20 @@ app.get("/api/metadata", (req, res) => {
 });
 
 
+
 // 🟣 Account status check (Configuration test)
 app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
 
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-
-  const response = {
+  res.status(200).json({
     data: {
-      status: "OK",
-      account_status: "active",
-      message: "Connection verified successfully"
+      id: "myrover",
+      name: "MyRover Shipping",
+      status: "OK"
     }
-  };
-
-  console.log("Sending Response:", response);
-  res.status(200).json(response);
+  });
 });
+
 
 
 
