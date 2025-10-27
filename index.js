@@ -73,16 +73,19 @@ app.post("/api/check", (req, res) => {
 
   const responseData = {
     data: {
-      account_status: "active", // required field
-      connected: true,          // required field
+      id: "myrover",
+      name: "MyRover Shipping",
+      status: "OK",
+      connected: true,
+      account_status: "active",
       message: "Connection verified successfully"
     }
   };
 
   console.log("🚀 Sending Response:", JSON.stringify(responseData, null, 2));
-
   res.status(200).json(responseData);
 });
+
 
 
 
