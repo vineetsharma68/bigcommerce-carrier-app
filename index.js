@@ -243,7 +243,7 @@ app.get("/api/load", (req, res) => {
 // -------------------------------
 // 🧾 ACCOUNT STATUS CHECK
 // -------------------------------
-app.post("/api/check", (req, res) => {
+/*app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
   console.log("Headers:", JSON.stringify(req.headers, null, 2));
   console.log("Body:", JSON.stringify(req.body, null, 2));
@@ -258,7 +258,21 @@ app.post("/api/check", (req, res) => {
 
   console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
   res.status(200).json(response);
+});*/
+
+app.post("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT: Account Status Check");
+
+  const response = {
+    account_status: "active",
+    connected: true,
+    message: "Connection verified successfully"
+  };
+
+  console.log("🚀 Sending Response:", response);
+  res.status(200).json(response);
 });
+
 
 // -------------------------------
 // 🧾 METADATA ENDPOINT
@@ -269,15 +283,16 @@ app.get("/api/metadata", (req, res) => {
   res.status(200).json({
     carriers: [
       {
-        carrier_id: MY_CARRIER_ID,
-        label: MY_DISPLAY_NAME,
+        carrier_id: 530,
+        label: "MyRover Shipping",
         countries: ["CA", "US"],
-        settings_url: `${APP_URL}/api/check`,
-        rates_url: `${APP_URL}/api/rates`,
-      },
-    ],
+        settings_url: "https://myrover-carrier.onrender.com/api/check",
+        rates_url: "https://myrover-carrier.onrender.com/api/rates"
+      }
+    ]
   });
 });
+
 
 // -------------------------------
 // 🚀 START SERVER
