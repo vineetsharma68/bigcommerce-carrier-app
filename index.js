@@ -230,8 +230,8 @@ app.get("/api/load", (req, res) => {
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status) - FINAL TEST
 // POST method (जो आपके logs में दिख रहा है)
-app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
+app.post("/api/check-v2", (req, res) => {
+  console.log("✅ /api/check-v2 HIT");
   return res.status(200).json({ status: "active" });
 });
 
@@ -258,7 +258,7 @@ app.get("/api/metadata", (req, res) => {
         label: "MyRover Shipping",
         countries: ["CA"], 
         // 🔑 MOST CRITICAL FIELD: BigCommerce को बताता है कि स्टेटस कहाँ चेक करें
-        settings_url: `${base_url}/api/check`, 
+        settings_url: `${base_url}/api/check-v2`, 
         // BC को बताता है कि दरें कहाँ से प्राप्त करें
         rates_url: `${base_url}/api/rates`, 
       },
