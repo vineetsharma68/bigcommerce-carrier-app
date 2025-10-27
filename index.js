@@ -276,7 +276,7 @@ app.get("/api/load", (req, res) => {
 
 // ✅ 7️⃣ Account verification (used by BigCommerce to check status)
 app.post("/api/check-v2", (req, res) => {
-  console.log("✅ /api/check-v2 HIT");
+  console.log("✅ /api/check HIT");
   return res.status(200).json({ status: "active" });
 });
 
@@ -294,7 +294,7 @@ app.get("/api/metadata", (req, res) => {
         carrier_id: "myrover",
         label: "MyRover Shipping",
         countries: ["CA"], 
-        settings_url: `${base_url}/api/check-v2`, // या जो भी आप उपयोग कर रहे हैं
+        settings_url: `${base_url}/api/check`, // या जो भी आप उपयोग कर रहे हैं
         rates_url: `${base_url}/api/rates`, 
       },
     ],
