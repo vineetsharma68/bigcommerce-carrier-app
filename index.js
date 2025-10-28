@@ -222,11 +222,11 @@ app.post("/api/check", (req, res) => {
       id: "myrover",
       name: "MyRover Shipping",
       account_status: "active",
-      connected: true,
-      message: "Connection verified successfully",
-    },
+      connected: true
+    }
   });
 });
+
 
 
 app.all("/api/check", (req, res) => {
