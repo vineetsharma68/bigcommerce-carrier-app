@@ -145,6 +145,46 @@ app.get("/debug/set-metadata", async (req, res) => {
   }
 });
 
+app.get("/v1/metadata", async (req, res) => {
+  console.log("📦 /v1/metadata HIT from BigCommerce");
+
+  try {
+    const metadata = {
+      meta: {
+        version: "1.0",
+        documentation: "https://myrover.io/docs/carrier-api",
+      },
+      data: {
+        carrier_name: "MyRover Express",
+        carrier_code: "myrover",
+        description: "MyRover Carrier Integration for BigCommerce",
+        supported_methods: [
+          {
+            type: "connection_test",
+            endpoint: "/v1/shipping/connection",
+            method: "POST",
+          },
+          {
+            type: "get_rates",
+            endpoint: "/v1/shipping/rates",
+            method: "POST",
+          }
+        ],
+      },
+    };
+
+    return res.status(200).json({ success: true, result: metadata });
+  } catch (err) {
+    console.error("❌ Metadata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Metadata generation failed",
+      error: err.message,
+    });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`🚀 MyRover Carrier running on port ${PORT}`);
 });
