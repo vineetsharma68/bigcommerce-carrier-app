@@ -182,18 +182,21 @@ async function enableCarrierInZone(storeHash, accessToken, zoneId) {
 
 // === 6️⃣ ACCOUNT CHECK ENDPOINT ===
 app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT");
-  return res.status(200).json({
-    data: {
-      id: "myrover",
-      name: "MyRover Shipping",
-      account_status: "active",
-      connected: true,
-      settings: {}, // important
-      message: "Connection verified successfully",
+  console.log("✅ /api/check HIT from BigCommerce");
+
+  res.status(200).json({
+    id: "myrover",
+    name: "MyRover Shipping",
+    description: "Real-time MyRover delivery rates",
+    account_status: "active",
+    connected: true,
+    settings: {
+      carrier_id: 530,
+      supported_services: ["MyRover Delivery (1–2 days)"],
     },
   });
 });
+
 
 app.all("/api/check", (req, res) => {
   console.log("✅ /api/check HIT from BigCommerce");
