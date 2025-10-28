@@ -293,10 +293,31 @@ app.post("/api/check", async (req, res) => {
 
 
 
+app.post("/account-status", async (req, res) => {
+  console.log("✅ /account-status HIT: Compatibility route for BigCommerce");
+  
+  const response = {
+    data: {
+      id: "myrover",
+      name: "MyRover Shipping",
+      account_status: "active",
+      connected: true,
+      message: "Account verified successfully (via /account-status)"
+    }
+  };
+  
+  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
+  return res.status(200).json(response);
+});
+
+
+
+
+
 // -------------------------------
 // 🧾 METADATA ENDPOINT
 // -------------------------------
-app.get("/api/metadata", (req, res) => {
+/*app.get("/api/metadata", (req, res) => {
   console.log("✅ /api/metadata HIT");
 
   res.status(200).json({
@@ -310,7 +331,23 @@ app.get("/api/metadata", (req, res) => {
       }
     ]
   });
+});*/
+app.get("/api/metadata", (req, res) => {
+  console.log("✅ /api/metadata HIT: Sending Carrier Metadata");
+
+  const base_url = process.env.APP_URL;
+
+  res.status(200).json({
+    carriers: [{
+      carrier_id: "myrover",
+      label: "MyRover Shipping",
+      countries: ["CA"],
+      settings_url: `${base_url}/account-status`, // 👈 UPDATED HERE
+      rates_url: `${base_url}/api/rates`,
+    }],
+  });
 });
+
 
 
 // -------------------------------
