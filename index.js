@@ -195,15 +195,16 @@ app.post("/api/check", (req, res) => {
   });
 });
 
-app.get("/api/check", (req, res) => {
-  res.json({
+app.all("/api/check", (req, res) => {
+  console.log("✅ /api/check HIT from BigCommerce");
+  res.status(200).json({
     data: {
       id: "myrover",
       name: "MyRover Shipping",
       account_status: "active",
       connected: true,
       settings: {},
-      message: "Manual check success",
+      message: "Connection verified successfully",
     },
   });
 });
