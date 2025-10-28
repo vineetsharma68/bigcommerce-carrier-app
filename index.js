@@ -135,15 +135,7 @@ app.get("/debug/test", (req, res) => {
 });
 
 // 🧩 Debug Route — Force Register Metadata
-app.get("/debug/set-metadata", async (req, res) => {
-  const { store, token } = req.query;
-  try {
-    const result = await registerMetadata(store, token);
-    res.json({ success: true, result });
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
+
 
 app.get("/v1/metadata", async (req, res) => {
   console.log("📦 /v1/metadata HIT from BigCommerce");
