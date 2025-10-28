@@ -181,7 +181,7 @@ async function enableCarrierInZone(storeHash, accessToken, zoneId) {
 }
 
 // === 6️⃣ ACCOUNT CHECK ENDPOINT ===
-app.post("/api/check", (req, res) => {
+/*app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
@@ -205,7 +205,60 @@ app.post("/api/check", (req, res) => {
   console.log("🚀 Sending Response:", response);
   res.status(200).json(response);
 });
+*/
 
+import express from "express";
+import jwt from "jsonwebtoken";
+
+const app = express();
+app.use(express.json());
+
+app.post("/api/check", async (req, res) => {
+  console.log("✅ /api/check HIT from BigCommerce");
+
+  // --- STEP 1: Try to extract and decode JWT ---
+  try {
+    const authHeader = req.headers.authorization || req.headers["x-auth-token"];
+
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const decoded = jwt.decode(token, { complete: true });
+
+      console.log("🔍 Decoded JWT Payload:", JSON.stringify(decoded?.payload, null, 2));
+
+      // If scopes exist, log them separately
+      if (decoded?.payload?.scope) {
+        console.log("🧩 Scopes in Token:", decoded.payload.scope);
+      } else {
+        console.log("⚠️ No 'scope' field found in JWT payload");
+      }
+    } else {
+      console.log("⚠️ No Authorization header found in request");
+    }
+  } catch (err) {
+    console.error("❌ Error decoding JWT:", err.message);
+  }
+
+  // --- STEP 2: Return test response ---
+  const response = {
+    status: "OK",
+    data: {
+      can_connect: true,
+      connected: true,
+      account_status: "active",
+      message: "Connection verified successfully",
+    },
+    messages: [
+      {
+        code: "SUCCESS",
+        text: "Connection successful. MyRover account verified.",
+      },
+    ],
+  };
+
+  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
+  return res.status(200).json(response);
+});
 
 
 app.all("/api/check", (req, res) => {
