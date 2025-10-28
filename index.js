@@ -1,124 +1,206 @@
+// index.js
 import express from "express";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
-import cors from "cors";
+import fetch from "node-fetch";
+import bodyParser from "body-parser";
 
 dotenv.config();
 const app = express();
-app.use(express.json());
-app.use(cors());
+app.use(bodyParser.json());
 
-/* =============================
-   ENVIRONMENT VARIABLES
-============================= */
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const REDIRECT_URI = process.env.REDIRECT_URI;
-const API_URL = "https://api.bigcommerce.com";
+// -----------------------------------------------------------------------------
+// 1️⃣ Environment Variables
+// -----------------------------------------------------------------------------
+const PORT = process.env.PORT || 8080;
+const CLIENT_ID = process.env.BC_CLIENT_ID;
+const CLIENT_SECRET = process.env.BC_CLIENT_SECRET;
+const REDIRECT_URI = process.env.BC_REDIRECT_URI;
+const BASE_URL = process.env.BASE_URL; // e.g., https://myrover-carrier.onrender.com
 
-let storeMemory = {}; // In-memory token storage (for test apps)
+// Store tokens in memory for now (Redis/DB recommended in production)
+let ACCESS_TOKEN = null;
+let STORE_HASH = null;
 
-/* =============================
-   STEP 1: INSTALL REDIRECT
-============================= */
-app.get("/api/install", (req, res) => {
+// -----------------------------------------------------------------------------
+// 2️⃣ Root route
+// -----------------------------------------------------------------------------
+app.get("/", (req, res) => {
+  res.send("🚚 MyRover Carrier App Running");
+});
+
+// -----------------------------------------------------------------------------
+// 3️⃣ OAuth Install Step 1 — Redirect user to BigCommerce Auth
+// -----------------------------------------------------------------------------
+app.get("/api/auth", (req, res) => {
   const { code, context, scope } = req.query;
   if (!code) return res.status(400).send("Missing code");
 
-  const tokenUrl = `${API_URL}/oauth2/token`;
+  const tokenUrl = "https://login.bigcommerce.com/oauth2/token";
+  const payload = {
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    redirect_uri: REDIRECT_URI,
+    grant_type: "authorization_code",
+    code,
+    scope,
+    context,
+  };
 
   fetch(tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      redirect_uri: REDIRECT_URI,
-      grant_type: "authorization_code",
-      code,
-      scope,
-      context,
-    }),
+    body: JSON.stringify(payload),
   })
     .then((r) => r.json())
     .then((data) => {
       console.log("🎟️ Token response:", data);
-      if (!data.access_token) return res.status(400).json({ error: "Failed to get access token", details: data });
 
-      const storeHash = data?.context?.split("/")[1];
-      storeMemory[storeHash] = data.access_token;
-      console.log(`✅ Access token stored for store: ${storeHash}`);
-
-      res.send(`
-        <h2>MyRover Carrier Installed ✅</h2>
-        <p>Store Hash: ${storeHash}</p>
-        <p>Access Token: ${data.access_token}</p>
-      `);
+      if (data.access_token && data.context) {
+        ACCESS_TOKEN = data.access_token;
+        STORE_HASH = data.context.replace("stores/", "");
+        console.log(`✅ ACCESS_TOKEN: ${ACCESS_TOKEN}`);
+        console.log(`✅ STORE_HASH: ${STORE_HASH}`);
+        res.redirect("/success");
+      } else {
+        res.status(400).json({ error: "Failed to get access token", details: data });
+      }
     })
     .catch((err) => {
-      console.error("❌ Error during install:", err);
-      res.status(500).json({ error: "Installation failed", details: err.message });
+      console.error("❌ Auth error:", err);
+      res.status(500).json({ error: "Auth request failed" });
     });
 });
 
-/* =============================
-   STEP 2: TEST CONNECTION ENDPOINT
-============================= */
-app.post("/v1/shipping/connection", (req, res) => {
-  console.log("✅ Test connection hit from BigCommerce");
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
+// -----------------------------------------------------------------------------
+// 4️⃣ OAuth Redirect (Callback URL)
+// -----------------------------------------------------------------------------
+app.get("/api/auth/callback", async (req, res) => {
+  const { code, context, scope } = req.query;
+  if (!code) return res.status(400).send("Missing code");
 
-  // Required: must return 200 + JSON
+  const tokenUrl = "https://login.bigcommerce.com/oauth2/token";
+  const payload = {
+    client_id: CLIENT_ID,
+    client_secret: CLIENT_SECRET,
+    redirect_uri: REDIRECT_URI,
+    grant_type: "authorization_code",
+    code,
+    scope,
+    context,
+  };
+
+  try {
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+
+    console.log("🎟️ Token response:", data);
+
+    if (data.access_token && data.context) {
+      ACCESS_TOKEN = data.access_token;
+      STORE_HASH = data.context.replace("stores/", "");
+      console.log(`✅ ACCESS_TOKEN: ${ACCESS_TOKEN}`);
+      console.log(`✅ STORE_HASH: ${STORE_HASH}`);
+      res.redirect("/success");
+    } else {
+      res.status(400).json({ error: "Failed to get access token", details: data });
+    }
+  } catch (err) {
+    console.error("❌ Auth Callback Error:", err);
+    res.status(500).json({ error: "Failed to exchange code for token" });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// 5️⃣ Success Page
+// -----------------------------------------------------------------------------
+app.get("/success", (req, res) => {
+  res.send("<h1>✅ MyRover App Installed Successfully!</h1>");
+});
+
+// -----------------------------------------------------------------------------
+// 6️⃣ Debug Endpoints
+// -----------------------------------------------------------------------------
+app.get("/debug/test", (req, res) => {
+  if (!ACCESS_TOKEN || !STORE_HASH)
+    return res.json({ error: "No token or store hash loaded in memory" });
+
+  res.json({
+    success: true,
+    store: STORE_HASH,
+    token: ACCESS_TOKEN.substring(0, 6) + "...",
+  });
+});
+
+// -----------------------------------------------------------------------------
+// 7️⃣ BigCommerce App “Test Connection” (Fix for Error Getting Account Status)
+// -----------------------------------------------------------------------------
+app.post("/api/check", async (req, res) => {
+  console.log("/api/check HIT from BigCommerce");
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    console.warn("⚠️ No Authorization header found in request");
+    return res.status(401).json({
+      status: "FAIL",
+      data: { can_connect: false },
+      messages: [{ code: "NO_AUTH", text: "Missing Authorization header" }],
+    });
+  }
+
   return res.status(200).json({
+    status: "OK",
+    data: {
+      can_connect: true,
+      connected: true,
+      account_status: "active",
+      message: "Connection verified successfully",
+    },
+    messages: [
+      { code: "SUCCESS", text: "Connection successful. MyRover verified." },
+    ],
+  });
+});
+
+// -----------------------------------------------------------------------------
+// 8️⃣ Carrier “Test Connection” Endpoint (Required by BigCommerce)
+// -----------------------------------------------------------------------------
+app.post("/v1/shipping/connection", (req, res) => {
+  console.log("✅ /v1/shipping/connection HIT");
+  res.status(200).json({
     status: "OK",
     message: "MyRover connection verified successfully",
   });
 });
 
-/* =============================
-   STEP 3: GET SHIPPING RATES
-============================= */
-app.post("/v1/shipping/rates", (req, res) => {
-  console.log("🚚 Rate request received from BigCommerce");
-  console.log("Body:", JSON.stringify(req.body, null, 2));
+// -----------------------------------------------------------------------------
+// 9️⃣ Carrier “Get Rates” Endpoint (Required by BigCommerce)
+// -----------------------------------------------------------------------------
+app.post("/v1/shipping/rates", async (req, res) => {
+  console.log("📦 /v1/shipping/rates HIT with body:", req.body);
 
-  const response = {
-    data: [
-      {
-        carrier_id: 530,
-        carrier_code: "myrover",
-        carrier_name: "MyRover Express",
-        rate_id: "MYROVER_STANDARD",
-        rate_name: "MyRover Delivery (1–2 Days)",
-        cost: 9.99,
-        currency: "CAD",
-        transit_time: "1–2 business days",
-        description: "Fast local delivery via MyRover",
-      },
-    ],
-  };
+  // You can read items, origin, destination, etc., from req.body here
+  const rates = [
+    {
+      carrier_id: 530,
+      carrier_code: "myrover",
+      carrier_name: "MyRover Express",
+      rate_id: "MYROVER_STANDARD",
+      rate_name: "MyRover Delivery (1–2 Days)",
+      cost: 9.99,
+      currency: "CAD",
+      transit_time: "1–2 business days",
+      description: "Fast local delivery via MyRover",
+    },
+  ];
 
-  return res.status(200).json(response);
+  res.status(200).json({ data: rates });
 });
 
-/* =============================
-   STEP 4: LOG REQUESTS (DEBUG)
-============================= */
-app.use((req, res, next) => {
-  console.log(`📩 ${req.method} ${req.originalUrl}`);
-  next();
-});
-
-/* =============================
-   STEP 5: HEALTH CHECK
-============================= */
-app.get("/", (req, res) => {
-  res.send("🚀 MyRover Carrier v1 API is live and ready!");
-});
-
-/* =============================
-   STEP 6: START SERVER
-============================= */
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+// -----------------------------------------------------------------------------
+// 🔟 Start Server
+// -----------------------------------------------------------------------------
+app.listen(PORT, () => console.log(`🚀 MyRover Carrier running on port ${PORT}`));
