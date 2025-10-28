@@ -76,7 +76,7 @@ app.get("/auth/callback", async (req, res) => {
 // ==========================
 // ⚙️ STEP 3: METADATA SETUP
 // ==========================
-async function registerMetadata(storeHash, token) {
+/*async function registerMetadata(storeHash, token) {
   try {
     const metadata = {
       modules: [
@@ -107,7 +107,7 @@ async function registerMetadata(storeHash, token) {
     return { error: error.message };
   }
 }
-
+*/
 // ==========================
 // ✅ STEP 4: TEST CONNECTION ENDPOINT
 // ==========================
