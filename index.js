@@ -322,13 +322,6 @@ app.post("/account/status", async (req, res) => {
 });
 
 
-  
-  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
-  return res.status(200).json(response);
-});
-
-
-
 
 
 // -------------------------------
