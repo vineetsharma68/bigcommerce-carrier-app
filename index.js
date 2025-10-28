@@ -1,206 +1,153 @@
 // index.js
 import express from "express";
-import dotenv from "dotenv";
 import fetch from "node-fetch";
-import bodyParser from "body-parser";
+import dotenv from "dotenv";
 
 dotenv.config();
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
-// -----------------------------------------------------------------------------
-// 1️⃣ Environment Variables
-// -----------------------------------------------------------------------------
-const PORT = process.env.PORT || 8080;
-const CLIENT_ID = process.env.BC_CLIENT_ID;
-const CLIENT_SECRET = process.env.BC_CLIENT_SECRET;
-const REDIRECT_URI = process.env.BC_REDIRECT_URI;
-const BASE_URL = process.env.BASE_URL; // e.g., https://myrover-carrier.onrender.com
+// 🔐 Environment variables
+const {
+  BC_CLIENT_ID,
+  BC_CLIENT_SECRET,
+  BC_REDIRECT_URI,
+  APP_URL,
+  PORT = 3000,
+} = process.env;
 
-// Store tokens in memory for now (Redis/DB recommended in production)
-let ACCESS_TOKEN = null;
+// 🔒 In-memory token store (for testing; use DB in production)
 let STORE_HASH = null;
+let ACCESS_TOKEN = null;
 
-// -----------------------------------------------------------------------------
-// 2️⃣ Root route
-// -----------------------------------------------------------------------------
+/* ==========================
+   1️⃣ Root - Health Check
+========================== */
 app.get("/", (req, res) => {
-  res.send("🚚 MyRover Carrier App Running");
+  res.json({
+    status: "MyRover Carrier App Running",
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// -----------------------------------------------------------------------------
-// 3️⃣ OAuth Install Step 1 — Redirect user to BigCommerce Auth
-// -----------------------------------------------------------------------------
-app.get("/api/auth", (req, res) => {
+/* ==========================
+   2️⃣ OAuth Install Redirect
+========================== */
+app.get("/api/install", (req, res) => {
   const { code, context, scope } = req.query;
-  if (!code) return res.status(400).send("Missing code");
+  if (code && context) {
+    return res.redirect(`/api/auth/callback?code=${code}&context=${context}`);
+  }
 
-  const tokenUrl = "https://login.bigcommerce.com/oauth2/token";
-  const payload = {
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    redirect_uri: REDIRECT_URI,
-    grant_type: "authorization_code",
-    code,
-    scope,
-    context,
-  };
-
-  fetch(tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  })
-    .then((r) => r.json())
-    .then((data) => {
-      console.log("🎟️ Token response:", data);
-
-      if (data.access_token && data.context) {
-        ACCESS_TOKEN = data.access_token;
-        STORE_HASH = data.context.replace("stores/", "");
-        console.log(`✅ ACCESS_TOKEN: ${ACCESS_TOKEN}`);
-        console.log(`✅ STORE_HASH: ${STORE_HASH}`);
-        res.redirect("/success");
-      } else {
-        res.status(400).json({ error: "Failed to get access token", details: data });
-      }
-    })
-    .catch((err) => {
-      console.error("❌ Auth error:", err);
-      res.status(500).json({ error: "Auth request failed" });
-    });
+  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${BC_CLIENT_ID}&scope=store_v2_information%20store_v2_orders&redirect_uri=${encodeURIComponent(
+    BC_REDIRECT_URI
+  )}&response_type=code`;
+  res.redirect(installUrl);
 });
 
-// -----------------------------------------------------------------------------
-// 4️⃣ OAuth Redirect (Callback URL)
-// -----------------------------------------------------------------------------
+/* ==========================
+   3️⃣ OAuth Callback
+========================== */
 app.get("/api/auth/callback", async (req, res) => {
-  const { code, context, scope } = req.query;
-  if (!code) return res.status(400).send("Missing code");
+  const { code, context } = req.query;
 
-  const tokenUrl = "https://login.bigcommerce.com/oauth2/token";
-  const payload = {
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    redirect_uri: REDIRECT_URI,
-    grant_type: "authorization_code",
-    code,
-    scope,
-    context,
-  };
+  if (!code || !context) {
+    return res.status(400).json({ error: "Missing code or context" });
+  }
+
+  console.log("🔐 Auth Callback for store:", context);
 
   try {
-    const response = await fetch(tokenUrl, {
+    // Exchange code for access token
+    const tokenRes = await fetch("https://login.bigcommerce.com/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        client_id: BC_CLIENT_ID,
+        client_secret: BC_CLIENT_SECRET,
+        redirect_uri: BC_REDIRECT_URI,
+        grant_type: "authorization_code",
+        code,
+        scope: "store_v2_information store_v2_orders",
+        context,
+      }),
     });
-    const data = await response.json();
 
-    console.log("🎟️ Token response:", data);
+    const tokenData = await tokenRes.json();
+    console.log("🎟️ Token response:", tokenData);
 
-    if (data.access_token && data.context) {
-      ACCESS_TOKEN = data.access_token;
-      STORE_HASH = data.context.replace("stores/", "");
-      console.log(`✅ ACCESS_TOKEN: ${ACCESS_TOKEN}`);
-      console.log(`✅ STORE_HASH: ${STORE_HASH}`);
-      res.redirect("/success");
-    } else {
-      res.status(400).json({ error: "Failed to get access token", details: data });
+    if (tokenData.error) {
+      return res.status(400).json({ error: tokenData.error });
     }
-  } catch (err) {
-    console.error("❌ Auth Callback Error:", err);
-    res.status(500).json({ error: "Failed to exchange code for token" });
-  }
-});
 
-// -----------------------------------------------------------------------------
-// 5️⃣ Success Page
-// -----------------------------------------------------------------------------
-app.get("/success", (req, res) => {
-  res.send("<h1>✅ MyRover App Installed Successfully!</h1>");
-});
+    // Save in-memory
+    ACCESS_TOKEN = tokenData.access_token;
+    STORE_HASH = tokenData.context.replace("stores/", "");
 
-// -----------------------------------------------------------------------------
-// 6️⃣ Debug Endpoints
-// -----------------------------------------------------------------------------
-app.get("/debug/test", (req, res) => {
-  if (!ACCESS_TOKEN || !STORE_HASH)
-    return res.json({ error: "No token or store hash loaded in memory" });
+    console.log("✅ Access token stored for store:", STORE_HASH);
 
-  res.json({
-    success: true,
-    store: STORE_HASH,
-    token: ACCESS_TOKEN.substring(0, 6) + "...",
-  });
-});
-
-// -----------------------------------------------------------------------------
-// 7️⃣ BigCommerce App “Test Connection” (Fix for Error Getting Account Status)
-// -----------------------------------------------------------------------------
-app.post("/api/check", async (req, res) => {
-  console.log("/api/check HIT from BigCommerce");
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader) {
-    console.warn("⚠️ No Authorization header found in request");
-    return res.status(401).json({
-      status: "FAIL",
-      data: { can_connect: false },
-      messages: [{ code: "NO_AUTH", text: "Missing Authorization header" }],
+    return res.json({
+      success: true,
+      store: STORE_HASH,
+      message: "App installed successfully!",
     });
+  } catch (err) {
+    console.error("❌ OAuth callback error:", err);
+    res.status(500).json({ error: "OAuth callback failed" });
   }
-
-  return res.status(200).json({
-    status: "OK",
-    data: {
-      can_connect: true,
-      connected: true,
-      account_status: "active",
-      message: "Connection verified successfully",
-    },
-    messages: [
-      { code: "SUCCESS", text: "Connection successful. MyRover verified." },
-    ],
-  });
 });
 
-// -----------------------------------------------------------------------------
-// 8️⃣ Carrier “Test Connection” Endpoint (Required by BigCommerce)
-// -----------------------------------------------------------------------------
+/* ==========================
+   4️⃣ Test Connection (Required)
+========================== */
 app.post("/v1/shipping/connection", (req, res) => {
-  console.log("✅ /v1/shipping/connection HIT");
+  console.log("✅ /v1/shipping/connection HIT from BigCommerce");
   res.status(200).json({
     status: "OK",
     message: "MyRover connection verified successfully",
   });
 });
 
-// -----------------------------------------------------------------------------
-// 9️⃣ Carrier “Get Rates” Endpoint (Required by BigCommerce)
-// -----------------------------------------------------------------------------
-app.post("/v1/shipping/rates", async (req, res) => {
-  console.log("📦 /v1/shipping/rates HIT with body:", req.body);
-
-  // You can read items, origin, destination, etc., from req.body here
-  const rates = [
-    {
-      carrier_id: 530,
-      carrier_code: "myrover",
-      carrier_name: "MyRover Express",
-      rate_id: "MYROVER_STANDARD",
-      rate_name: "MyRover Delivery (1–2 Days)",
-      cost: 9.99,
-      currency: "CAD",
-      transit_time: "1–2 business days",
-      description: "Fast local delivery via MyRover",
-    },
-  ];
-
-  res.status(200).json({ data: rates });
+/* ==========================
+   5️⃣ Get Rates (Required)
+========================== */
+app.post("/v1/shipping/rates", (req, res) => {
+  console.log("📦 /v1/shipping/rates HIT from BigCommerce");
+  res.status(200).json({
+    data: [
+      {
+        carrier_id: 530,
+        carrier_code: "myrover",
+        carrier_name: "MyRover Express",
+        rate_id: "MYROVER_STANDARD",
+        rate_name: "MyRover Delivery (1–2 Days)",
+        cost: 9.99,
+        currency: "CAD",
+        transit_time: "1–2 business days",
+        description: "Fast local delivery via MyRover",
+      },
+    ],
+  });
 });
 
-// -----------------------------------------------------------------------------
-// 🔟 Start Server
-// -----------------------------------------------------------------------------
-app.listen(PORT, () => console.log(`🚀 MyRover Carrier running on port ${PORT}`));
+/* ==========================
+   6️⃣ Debug - Check token
+========================== */
+app.get("/debug/test", (req, res) => {
+  if (!ACCESS_TOKEN) {
+    return res.json({ error: "No token loaded in memory" });
+  }
+  res.json({
+    success: true,
+    store: STORE_HASH,
+    token: ACCESS_TOKEN.substring(0, 10) + "...",
+  });
+});
+
+/* ==========================
+   7️⃣ Start Server
+========================== */
+app.listen(PORT, () => {
+  console.log(`🚀 MyRover Carrier App running on port ${PORT}`);
+  console.log(`🔗 ${APP_URL}`);
+});
