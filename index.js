@@ -1,342 +1,124 @@
 import express from "express";
 import fetch from "node-fetch";
-import cors from "cors";
 import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ========== CONFIG ==========
+/* =============================
+   ENVIRONMENT VARIABLES
+============================= */
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const BASE_URL = process.env.BASE_URL || "https://myrover-carrier.onrender.com";
-const CARRIER_ID = 530; // Provided by BigCommerce team
+const REDIRECT_URI = process.env.REDIRECT_URI;
+const API_URL = "https://api.bigcommerce.com";
 
-let STORE_HASH = "";
-let ACCESS_TOKEN = "";
+let storeMemory = {}; // In-memory token storage (for test apps)
 
-// ========================================================
-// 1️⃣ INSTALLATION ROUTE
-// ========================================================
-app.get("/auth/install", (req, res) => {
-  const { context, scope, code } = req.query;
-  console.log("🛠 Install request received:", req.query);
-
-  if (!code || !context)
-    return res.status(400).send("Missing installation parameters.");
-
-  const redirect = `${BASE_URL}/auth/callback?code=${code}&scope=${scope}&context=${context}`;
-  return res.redirect(redirect);
-});
-
-// ========================================================
-// 2️⃣ OAUTH CALLBACK
-// ========================================================
-app.get("/auth/callback", async (req, res) => {
+/* =============================
+   STEP 1: INSTALL REDIRECT
+============================= */
+app.get("/api/install", (req, res) => {
   const { code, context, scope } = req.query;
-  console.log("🔐 Auth Callback for store:", context);
+  if (!code) return res.status(400).send("Missing code");
 
-  try {
-    const tokenResponse = await fetch("https://login.bigcommerce.com/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        redirect_uri: `${BASE_URL}/auth/callback`,
-        grant_type: "authorization_code",
-        code,
-        scope,
-        context,
-      }),
+  const tokenUrl = `${API_URL}/oauth2/token`;
+
+  fetch(tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      redirect_uri: REDIRECT_URI,
+      grant_type: "authorization_code",
+      code,
+      scope,
+      context,
+    }),
+  })
+    .then((r) => r.json())
+    .then((data) => {
+      console.log("🎟️ Token response:", data);
+      if (!data.access_token) return res.status(400).json({ error: "Failed to get access token", details: data });
+
+      const storeHash = data?.context?.split("/")[1];
+      storeMemory[storeHash] = data.access_token;
+      console.log(`✅ Access token stored for store: ${storeHash}`);
+
+      res.send(`
+        <h2>MyRover Carrier Installed ✅</h2>
+        <p>Store Hash: ${storeHash}</p>
+        <p>Access Token: ${data.access_token}</p>
+      `);
+    })
+    .catch((err) => {
+      console.error("❌ Error during install:", err);
+      res.status(500).json({ error: "Installation failed", details: err.message });
     });
-
-    const data = await tokenResponse.json();
-    console.log("🎟️ Token response:", data);
-
-    if (!data.access_token) {
-      return res.status(400).json({ error: "Failed to get access token", details: data });
-    }
-
-    ACCESS_TOKEN = data.access_token;
-    STORE_HASH = data.context.replace("stores/", "");
-    console.log(`✅ Access token stored for store: ${STORE_HASH}`);
-
-    // Automatically register carrier + zone
-    await registerCarrier(STORE_HASH, ACCESS_TOKEN);
-    await ensureZoneSetup(STORE_HASH, ACCESS_TOKEN);
-
-    res.send("🎉 MyRover Installed, Carrier Registered, Zone Configured!");
-  } catch (err) {
-    console.error("❌ OAuth Callback Error:", err);
-    res.status(500).send("OAuth callback failed. Check logs.");
-  }
 });
 
-// ========================================================
-// 3️⃣ REGISTER CARRIER
-// ========================================================
-async function registerCarrier(storeHash, accessToken) {
-  console.log("🚀 Registering MyRover carrier...");
-  try {
-    const res = await fetch(`https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/carriers`, {
-      method: "POST",
-      headers: {
-        "X-Auth-Token": accessToken,
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        carrier_id: CARRIER_ID,
-        name: "MyRover Shipping",
-        code: "myrover",
-        type: "custom",
-        settings: {
-          name: "MyRover Delivery",
-          is_enabled: true,
-          connection: { url: `${BASE_URL}/rates` },
-          test_connection: { url: `${BASE_URL}/api/check` },
-        },
-      }),
-    });
-
-    const data = await res.json();
-    console.log("✅ Carrier registration response:", data);
-  } catch (err) {
-    console.error("❌ Carrier registration failed:", err.message);
-  }
-}
-
-// ========================================================
-// 4️⃣ AUTO ZONE CREATION
-// ========================================================
-async function ensureZoneSetup(storeHash, accessToken) {
-  console.log("🌍 Ensuring shipping zone exists...");
-
-  try {
-    const zonesRes = await fetch(`https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/zones`, {
-      headers: { "X-Auth-Token": accessToken, "Accept": "application/json" },
-    });
-
-    const zones = await zonesRes.json();
-
-    let zoneId;
-    if (Array.isArray(zones) && zones.length > 0) {
-      zoneId = zones[0].id;
-      console.log(`🟢 Using existing zone: ${zones[0].name} (ID: ${zoneId})`);
-    } else {
-      console.log("🔧 Creating new zone: Canada Zone");
-      const zoneRes = await fetch(`https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/zones`, {
-        method: "POST",
-        headers: {
-          "X-Auth-Token": accessToken,
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: "Canada Zone",
-          countries: ["CA"],
-          handling_fees: { fixed_fee: 0, percent_fee: 0 },
-        }),
-      });
-
-      const zoneData = await zoneRes.json();
-      zoneId = zoneData.id;
-      console.log("✅ Created new zone:", zoneData);
-    }
-
-    await enableCarrierInZone(storeHash, accessToken, zoneId);
-  } catch (err) {
-    console.error("❌ Zone setup failed:", err.message);
-  }
-}
-
-// ========================================================
-// 5️⃣ ENABLE CARRIER IN ZONE
-// ========================================================
-async function enableCarrierInZone(storeHash, accessToken, zoneId) {
-  console.log(`⚙️ Enabling MyRover in zone ID: ${zoneId}`);
-  try {
-    const response = await fetch(
-      `https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/zones/${zoneId}/methods`,
-      {
-        method: "POST",
-        headers: {
-          "X-Auth-Token": accessToken,
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: "custom",
-          enabled: true,
-          name: "MyRover Delivery",
-          carrier_id: CARRIER_ID,
-          settings: { display_name: "MyRover Express Shipping" },
-        }),
-      }
-    );
-
-    const data = await response.json();
-    console.log("✅ Enabled MyRover in zone:", data);
-  } catch (err) {
-    console.error("❌ Error enabling carrier in zone:", err.message);
-  }
-}
-
-// ========================================================
-// 6️⃣ /api/check ENDPOINT
-// ========================================================
-app.post("/api/check", (req, res) => {
-  console.log("✅ /api/check HIT from BigCommerce");
+/* =============================
+   STEP 2: TEST CONNECTION ENDPOINT
+============================= */
+app.post("/v1/shipping/connection", (req, res) => {
+  console.log("✅ Test connection hit from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
+  // Required: must return 200 + JSON
   return res.status(200).json({
-    data: {
-      can_connect: true,
-      connected: true,
-      account_status: "active",
-      message: "Connection verified successfully",
-    },
-    meta: {},
-    errors: [],
+    status: "OK",
+    message: "MyRover connection verified successfully",
   });
 });
 
-// ========================================================
-// 7️⃣ /rates ENDPOINT
-// ========================================================
-app.post("/rates", (req, res) => {
-  console.log("📦 /rates HIT:", JSON.stringify(req.body, null, 2));
+/* =============================
+   STEP 3: GET SHIPPING RATES
+============================= */
+app.post("/v1/shipping/rates", (req, res) => {
+  console.log("🚚 Rate request received from BigCommerce");
+  console.log("Body:", JSON.stringify(req.body, null, 2));
 
-  return res.status(200).json({
+  const response = {
     data: [
       {
-        carrier_id: CARRIER_ID,
+        carrier_id: 530,
         carrier_code: "myrover",
         carrier_name: "MyRover Express",
         rate_id: "MYROVER_STANDARD",
-        rate_name: "MyRover Delivery (1–2 days)",
+        rate_name: "MyRover Delivery (1–2 Days)",
         cost: 9.99,
         currency: "CAD",
         transit_time: "1–2 business days",
-        description: "Fast GTA delivery",
+        description: "Fast local delivery via MyRover",
       },
     ],
-  });
+  };
+
+  return res.status(200).json(response);
 });
 
-// ========================================================
-// 🧪 DEBUG ROUTES
-// ========================================================
-app.get("/debug/test", (req, res) => {
-  if (!ACCESS_TOKEN || !STORE_HASH)
-    return res.json({ error: "No token or store hash loaded" });
-  res.json({ success: true, store: STORE_HASH, token: ACCESS_TOKEN });
+/* =============================
+   STEP 4: LOG REQUESTS (DEBUG)
+============================= */
+app.use((req, res, next) => {
+  console.log(`📩 ${req.method} ${req.originalUrl}`);
+  next();
 });
 
-app.get("/debug/carriers", async (req, res) => {
-  if (!ACCESS_TOKEN || !STORE_HASH)
-    return res.json({ error: "Store not connected or token missing" });
-  try {
-    const response = await fetch(
-      `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/shipping/carriers`,
-      { headers: { "X-Auth-Token": ACCESS_TOKEN, Accept: "application/json" } }
-    );
-    const data = await response.json();
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+/* =============================
+   STEP 5: HEALTH CHECK
+============================= */
+app.get("/", (req, res) => {
+  res.send("🚀 MyRover Carrier v1 API is live and ready!");
 });
 
-
-
-// ==============================
-// 🧪 DEBUG: Check store_v2_shipping scope
-// ==============================
-
-app.get("/debug/shipping-scope", async (req, res) => {
-  if (!ACCESS_TOKEN || !STORE_HASH) {
-    return res.json({
-      error: "No token or store hash loaded in memory",
-      hint: "Reinstall your app to refresh access token"
-    });
-  }
-
-  const url = `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/shipping/carriers`;
-  console.log(`🔍 Checking shipping scope at: ${url}`);
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "X-Auth-Token": ACCESS_TOKEN,
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      }
-    });
-
-    const text = await response.text();
-    console.log("📦 BigCommerce Response:", text);
-
-    // Try parsing if JSON
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-
-    if (response.status === 200) {
-      return res.json({
-        success: true,
-        message: "✅ store_v2_shipping scope is ACTIVE.",
-        data
-      });
-    } else if (response.status === 404) {
-      return res.json({
-        success: false,
-        message:
-          "❌ store_v2_shipping scope NOT ACTIVE or endpoint unavailable.",
-        status: response.status,
-        response: data
-      });
-    } else if (response.status === 401) {
-      return res.json({
-        success: false,
-        message:
-          "⚠️ Unauthorized — token may not include store_v2_shipping scope.",
-        status: response.status,
-        response: data
-      });
-    } else {
-      return res.json({
-        success: false,
-        message: "⚠️ Unexpected response from BigCommerce API.",
-        status: response.status,
-        response: data
-      });
-    }
-  } catch (error) {
-    console.error("❌ Error verifying scope:", error);
-    res.status(500).json({ error: "Request failed", details: error.message });
-  }
-});
-
-
-
-
-
-// ========================================================
-// 🏠 ROOT
-// ========================================================
-app.get("/", (req, res) => res.send("🚚 MyRover Carrier App Running (Full Auto Setup)!"));
-
-// ========================================================
-// 🚀 START SERVER
-// ========================================================
+/* =============================
+   STEP 6: START SERVER
+============================= */
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
