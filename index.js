@@ -146,18 +146,41 @@ app.post("/v1/shipping/rates", (req, res) => {
 // ==========================
 // 🧩 STEP 6: DEBUG METADATA MANUAL SETUP
 // ==========================
-app.get("/debug/set-metadata", async (req, res) => {
-  if (!ACCESS_TOKEN || !STORE_HASH) {
-    return res.json({ error: "No token or store hash loaded in memory" });
+// ✅ Metadata registration function
+async function registerMetadata(storeHash, token) {
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
+
+  const metadata = [
+    {
+      key: "shipping_connection",
+      value: "/v1/shipping/connection"
+    },
+    {
+      key: "shipping_rates",
+      value: "/v1/shipping/rates"
+    }
+  ];
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(metadata)
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    console.error("❌ Metadata registration failed:", data);
+    throw new Error(JSON.stringify(data || { message: "Unknown error" }));
   }
 
-  try {
-    const result = await registerMetadata(STORE_HASH, ACCESS_TOKEN);
-    res.json({ success: true, result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+  console.log("✅ Metadata registered:", data);
+  return data;
+}
+
 
 // ==========================
 // 🧠 STEP 7: /api/check (for manual tests)
