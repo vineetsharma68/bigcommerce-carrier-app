@@ -360,6 +360,45 @@ app.get("/api/metadata", (req, res) => {
 
 
 
+import fetch from "node-fetch";
+
+async function registerCarrier() {
+  const storeHash = "sjd7gztdev";
+  const accessToken = "d0ubep2i3smp9cabsyyby31hvdd8171";
+  const clientId = "do8br6kf70cvh5klt4ffk7mvz3qb6rp";
+
+  const response = await fetch(`https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/carriers`, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": accessToken,
+      "X-Auth-Client": clientId,
+      "Accept": "application/json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      carrier_id: 530,
+      name: "MyRover Shipping",
+      code: "myrover",
+      type: "custom",
+      settings: {
+        name: "MyRover Delivery",
+        is_enabled: true,
+        connection: {
+          url: "https://myrover-carrier.onrender.com/rates"
+        },
+        test_connection: {
+          url: "https://myrover-carrier.onrender.com/api/check"
+        }
+      }
+    })
+  });
+
+  const data = await response.json();
+  console.log("✅ Carrier registration response:", data);
+}
+
+
+
 // -------------------------------
 // 🚀 START SERVER
 // -------------------------------
