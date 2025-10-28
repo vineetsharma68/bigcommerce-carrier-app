@@ -1,7 +1,8 @@
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const fetch = require("node-fetch");
+import express from "express";
+import bodyParser from "body-parser";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
@@ -46,7 +47,6 @@ app.get("/auth/callback", async (req, res) => {
       ACCESS_TOKEN = data.access_token;
       STORE_HASH = storeHash;
 
-      // Optional: persist in Render env vars (manual or via logs)
       console.log("✅ ACCESS_TOKEN:", ACCESS_TOKEN);
       console.log("✅ STORE_HASH:", STORE_HASH);
 
@@ -60,7 +60,7 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// ✅ /api/check — called by BigCommerce to verify connection
+// ✅ /api/check — BigCommerce connection test
 app.post("/api/check", async (req, res) => {
   console.log("/api/check HIT from BigCommerce");
 
