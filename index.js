@@ -323,6 +323,10 @@ app.get("/debug/carrier/:id", async (req, res) => {
 });
 
 
+app.get("/debug/test", async (req, res) => {
+  if (!ACCESS_TOKEN) return res.json({ error: "No token loaded in memory" });
+  return res.json({ success: true, store: STORE_HASH, token: ACCESS_TOKEN });
+});
 
 
 // 3️⃣ Check current OAuth scopes
