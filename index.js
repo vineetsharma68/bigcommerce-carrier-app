@@ -1,119 +1,78 @@
-// index.js
 import express from "express";
-import fetch from "node-fetch";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config();
+
 const app = express();
 app.use(express.json());
 
-// 🔐 Environment variables
-const {
-  BC_CLIENT_ID,
-  BC_CLIENT_SECRET,
-  BC_REDIRECT_URI,
-  APP_URL,
-  PORT = 3000,
-} = process.env;
+const PORT = process.env.PORT || 3000;
 
-// 🔒 In-memory token store (for testing; use DB in production)
-let STORE_HASH = null;
-let ACCESS_TOKEN = null;
+// --- Utility: simple log writer ---
+function logToFile(filename, data) {
+  const timestamp = new Date().toISOString();
+  fs.appendFileSync(
+    filename,
+    `[${timestamp}] ${JSON.stringify(data, null, 2)}\n\n`
+  );
+}
 
-/* ==========================
-   1️⃣ Root - Health Check
-========================== */
+// --- Root health check ---
 app.get("/", (req, res) => {
-  res.json({
-    status: "MyRover Carrier App Running",
-    timestamp: new Date().toISOString(),
-  });
+  res.send("✅ MyRover Carrier App is Running (Debug Mode Enabled)");
 });
 
-/* ==========================
-   2️⃣ OAuth Install Redirect
-========================== */
-app.get("/api/install", (req, res) => {
-  const { code, context, scope } = req.query;
-  if (code && context) {
-    return res.redirect(`/api/auth/callback?code=${code}&context=${context}`);
-  }
-
-  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${BC_CLIENT_ID}&scope=store_v2_information%20store_v2_orders&redirect_uri=${encodeURIComponent(
-    BC_REDIRECT_URI
-  )}&response_type=code`;
-  res.redirect(installUrl);
+// --- OAuth callback placeholder ---
+app.get("/api/auth/callback", (req, res) => {
+  console.log("🔐 Auth Callback hit:", req.query);
+  logToFile("logs/auth_callback.log", { query: req.query });
+  res.json({ success: true });
 });
 
-/* ==========================
-   3️⃣ OAuth Callback
-========================== */
-app.get("/api/auth/callback", async (req, res) => {
-  const { code, context } = req.query;
-
-  if (!code || !context) {
-    return res.status(400).json({ error: "Missing code or context" });
-  }
-
-  console.log("🔐 Auth Callback for store:", context);
-
-  try {
-    // Exchange code for access token
-    const tokenRes = await fetch("https://login.bigcommerce.com/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: BC_CLIENT_ID,
-        client_secret: BC_CLIENT_SECRET,
-        redirect_uri: BC_REDIRECT_URI,
-        grant_type: "authorization_code",
-        code,
-        scope: "store_v2_information store_v2_orders",
-        context,
-      }),
-    });
-
-    const tokenData = await tokenRes.json();
-    console.log("🎟️ Token response:", tokenData);
-
-    if (tokenData.error) {
-      return res.status(400).json({ error: tokenData.error });
-    }
-
-    // Save in-memory
-    ACCESS_TOKEN = tokenData.access_token;
-    STORE_HASH = tokenData.context.replace("stores/", "");
-
-    console.log("✅ Access token stored for store:", STORE_HASH);
-
-    return res.json({
-      success: true,
-      store: STORE_HASH,
-      message: "App installed successfully!",
-    });
-  } catch (err) {
-    console.error("❌ OAuth callback error:", err);
-    res.status(500).json({ error: "OAuth callback failed" });
-  }
+// --- Load / Uninstall ---
+app.get("/api/load", (req, res) => {
+  console.log("🟢 App Loaded");
+  res.send("App Loaded");
+});
+app.get("/api/uninstall", (req, res) => {
+  console.log("🔴 App Uninstalled");
+  res.send("App Uninstalled");
 });
 
-/* ==========================
-   4️⃣ Test Connection (Required)
-========================== */
+// --- REQUIRED ENDPOINTS ---
+
+// ✅ 1️⃣ Validate Connection (Test Connection)
 app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ /v1/shipping/connection HIT from BigCommerce");
+
+  // Log full request for debug
+  logToFile("logs/connection.log", {
+    headers: req.headers,
+    body: req.body,
+  });
+
+  // Respond in correct REST Contract format
   res.status(200).json({
-    status: "OK",
-    message: "MyRover connection verified successfully",
+    valid: true,
+    messages: [
+      {
+        code: "SUCCESS",
+        text: "Connection successful. MyRover account verified.",
+      },
+    ],
   });
 });
 
-/* ==========================
-   5️⃣ Get Rates (Required)
-========================== */
+// ✅ 2️⃣ Return Shipping Rates
 app.post("/v1/shipping/rates", (req, res) => {
   console.log("📦 /v1/shipping/rates HIT from BigCommerce");
-  res.status(200).json({
+  logToFile("logs/rates.log", {
+    headers: req.headers,
+    body: req.body,
+  });
+
+  const ratesResponse = {
     data: [
       {
         carrier_id: 530,
@@ -127,27 +86,22 @@ app.post("/v1/shipping/rates", (req, res) => {
         description: "Fast local delivery via MyRover",
       },
     ],
-  });
+    valid: true,
+    messages: [],
+  };
+
+  res.status(200).json(ratesResponse);
 });
 
-/* ==========================
-   6️⃣ Debug - Check token
-========================== */
+// --- Debug route to check uptime ---
 app.get("/debug/test", (req, res) => {
-  if (!ACCESS_TOKEN) {
-    return res.json({ error: "No token loaded in memory" });
-  }
   res.json({
     success: true,
-    store: STORE_HASH,
-    token: ACCESS_TOKEN.substring(0, 10) + "...",
+    timestamp: new Date().toISOString(),
   });
 });
 
-/* ==========================
-   7️⃣ Start Server
-========================== */
+// --- Start server ---
 app.listen(PORT, () => {
-  console.log(`🚀 MyRover Carrier App running on port ${PORT}`);
-  console.log(`🔗 ${APP_URL}`);
+  console.log(`🚀 MyRover Carrier running on port ${PORT}`);
 });
