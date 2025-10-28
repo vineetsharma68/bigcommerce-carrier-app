@@ -271,4 +271,96 @@ app.get("/", (req, res) => res.send("🚚 MyRover Carrier App Running (Auto Setu
 
 // === 🚀 START SERVER ===
 const PORT = process.env.PORT || 10000;
+
+
+// === 🧪 DEBUG ENDPOINTS ===
+
+// 1️⃣ Check list of carriers
+app.get("/debug/carriers", async (req, res) => {
+  try {
+    if (!STORE_HASH || !ACCESS_TOKEN) {
+      return res.status(400).json({ error: "Store not connected or token missing" });
+    }
+
+    const response = await fetch(`https://api.bigcommerce.com/stores/${STORE_HASH}/v2/shipping/carriers`, {
+      headers: {
+        "X-Auth-Token": ACCESS_TOKEN,
+        "X-Auth-Client": CLIENT_ID,
+        "Accept": "application/json"
+      }
+    });
+    const data = await response.json();
+    console.log("🧾 /debug/carriers:", data);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ /debug/carriers error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2️⃣ Check specific carrier (ID 530)
+app.get("/debug/carrier/:id", async (req, res) => {
+  try {
+    const carrierId = req.params.id;
+    if (!STORE_HASH || !ACCESS_TOKEN) {
+      return res.status(400).json({ error: "Store not connected or token missing" });
+    }
+
+    const response = await fetch(`https://api.bigcommerce.com/stores/${STORE_HASH}/v2/shipping/carriers/${carrierId}`, {
+      headers: {
+        "X-Auth-Token": ACCESS_TOKEN,
+        "X-Auth-Client": CLIENT_ID,
+        "Accept": "application/json"
+      }
+    });
+    const data = await response.json();
+    console.log(`🔍 /debug/carrier/${carrierId}:`, data);
+    res.json(data);
+  } catch (err) {
+    console.error("❌ /debug/carrier/:id error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
+// 3️⃣ Check current OAuth scopes
+app.get("/debug/scopes", async (req, res) => {
+  try {
+    if (!ACCESS_TOKEN) {
+      return res.status(400).json({ error: "Access token missing. App not authorized yet." });
+    }
+
+    const response = await fetch("https://api.bigcommerce.com/stores/me", {
+      headers: {
+        "X-Auth-Token": ACCESS_TOKEN,
+        "Accept": "application/json"
+      }
+    });
+
+    const data = await response.json();
+
+    if (response.status >= 400) {
+      console.log("❌ /debug/scopes BigCommerce error:", data);
+      return res.status(response.status).json(data);
+    }
+
+    // Extract scopes from response headers (if any)
+    const scopes = response.headers.get("x-auth-scopes");
+
+    console.log("🔍 /debug/scopes result:", scopes || "(no scopes header)");
+    res.json({
+      success: true,
+      scopes: scopes ? scopes.split(" ") : [],
+      info: data
+    });
+  } catch (err) {
+    console.error("❌ /debug/scopes error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
