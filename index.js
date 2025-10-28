@@ -9,7 +9,7 @@ app.use(cors());
 const STORE_HASH = "sjd7gztdev"; // your BigCommerce store hash
 const CLIENT_ID = "do8br6kf70cvh5klt4ffk7mvz3qb6rp";
 const ACCESS_TOKEN = "d0ubep2i3smp9cabsyyby31hvdd8171";
-const CARRIER_ID = 521;
+const CARRIER_ID = 530;
 const BASE_URL = "https://myrover-carrier.onrender.com";
 
 // === 🚚 REGISTER CARRIER WITH BIGCOMMERCE ===
