@@ -291,11 +291,8 @@ app.post("/api/check", async (req, res) => {
 });
 
 
-
-
-app.post("/account-status", async (req, res) => {
-  console.log("✅ /account-status HIT: Compatibility route for BigCommerce");
-  
+  app.post("/account-status", async (req, res) => {
+  console.log("✅ /account-status HIT: Compatibility route");
   const response = {
     data: {
       id: "myrover",
@@ -305,6 +302,25 @@ app.post("/account-status", async (req, res) => {
       message: "Account verified successfully (via /account-status)"
     }
   };
+  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
+  res.status(200).json(response);
+});
+
+app.post("/account/status", async (req, res) => {
+  console.log("✅ /account/status HIT: Compatibility route");
+  const response = {
+    data: {
+      id: "myrover",
+      name: "MyRover Shipping",
+      account_status: "active",
+      connected: true,
+      message: "Account verified successfully (via /account/status)"
+    }
+  };
+  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
+  res.status(200).json(response);
+});
+
   
   console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
   return res.status(200).json(response);
