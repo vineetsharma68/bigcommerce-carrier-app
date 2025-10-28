@@ -186,22 +186,24 @@ app.post("/api/check", (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  res.status(200).json({
+  const response = {
     status: "OK",
+    data: {
+      can_connect: true,
+      connected: true,
+      account_status: "active",
+      message: "Connection verified successfully",
+    },
     messages: [
       {
         code: "SUCCESS",
         text: "Connection successful. MyRover account verified.",
       },
     ],
-    data: {
-      carrier_id: "myrover",
-      name: "MyRover Shipping",
-      description: "Live MyRover carrier integration",
-      account_status: "active",
-      connected: true,
-    },
-  });
+  };
+
+  console.log("🚀 Sending Response:", response);
+  res.status(200).json(response);
 });
 
 
