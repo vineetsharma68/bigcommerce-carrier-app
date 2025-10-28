@@ -207,11 +207,10 @@ async function enableCarrierInZone(storeHash, accessToken, zoneId) {
 });
 */
 
-import express from "express";
+
 import jwt from "jsonwebtoken";
 
-const app = express();
-app.use(express.json());
+
 
 app.post("/api/check", async (req, res) => {
   console.log("✅ /api/check HIT from BigCommerce");
