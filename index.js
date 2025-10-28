@@ -189,10 +189,26 @@ app.post("/api/check", (req, res) => {
       name: "MyRover Shipping",
       account_status: "active",
       connected: true,
+      settings: {}, // important
       message: "Connection verified successfully",
     },
   });
 });
+
+app.get("/api/check", (req, res) => {
+  res.json({
+    data: {
+      id: "myrover",
+      name: "MyRover Shipping",
+      account_status: "active",
+      connected: true,
+      settings: {},
+      message: "Manual check success",
+    },
+  });
+});
+
+
 
 // === 7️⃣ RATES ENDPOINT ===
 app.post("/rates", (req, res) => {
