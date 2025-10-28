@@ -252,6 +252,84 @@ app.get("/debug/carriers", async (req, res) => {
   }
 });
 
+
+
+// ==============================
+// 🧪 DEBUG: Check store_v2_shipping scope
+// ==============================
+
+app.get("/debug/shipping-scope", async (req, res) => {
+  if (!ACCESS_TOKEN || !STORE_HASH) {
+    return res.json({
+      error: "No token or store hash loaded in memory",
+      hint: "Reinstall your app to refresh access token"
+    });
+  }
+
+  const url = `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/shipping/carriers`;
+  console.log(`🔍 Checking shipping scope at: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "X-Auth-Token": ACCESS_TOKEN,
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      }
+    });
+
+    const text = await response.text();
+    console.log("📦 BigCommerce Response:", text);
+
+    // Try parsing if JSON
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    if (response.status === 200) {
+      return res.json({
+        success: true,
+        message: "✅ store_v2_shipping scope is ACTIVE.",
+        data
+      });
+    } else if (response.status === 404) {
+      return res.json({
+        success: false,
+        message:
+          "❌ store_v2_shipping scope NOT ACTIVE or endpoint unavailable.",
+        status: response.status,
+        response: data
+      });
+    } else if (response.status === 401) {
+      return res.json({
+        success: false,
+        message:
+          "⚠️ Unauthorized — token may not include store_v2_shipping scope.",
+        status: response.status,
+        response: data
+      });
+    } else {
+      return res.json({
+        success: false,
+        message: "⚠️ Unexpected response from BigCommerce API.",
+        status: response.status,
+        response: data
+      });
+    }
+  } catch (error) {
+    console.error("❌ Error verifying scope:", error);
+    res.status(500).json({ error: "Request failed", details: error.message });
+  }
+});
+
+
+
+
+
 // ========================================================
 // 🏠 ROOT
 // ========================================================
