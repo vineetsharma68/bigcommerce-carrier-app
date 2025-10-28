@@ -212,51 +212,20 @@ import jwt from "jsonwebtoken";
 
 
 
-app.post("/api/check", async (req, res) => {
+app.post("/api/check", (req, res) => {
   console.log("✅ /api/check HIT from BigCommerce");
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
 
-  // --- STEP 1: Try to extract and decode JWT ---
-  try {
-    const authHeader = req.headers.authorization || req.headers["x-auth-token"];
-
-    if (authHeader) {
-      const token = authHeader.replace("Bearer ", "");
-      const decoded = jwt.decode(token, { complete: true });
-
-      console.log("🔍 Decoded JWT Payload:", JSON.stringify(decoded?.payload, null, 2));
-
-      // If scopes exist, log them separately
-      if (decoded?.payload?.scope) {
-        console.log("🧩 Scopes in Token:", decoded.payload.scope);
-      } else {
-        console.log("⚠️ No 'scope' field found in JWT payload");
-      }
-    } else {
-      console.log("⚠️ No Authorization header found in request");
-    }
-  } catch (err) {
-    console.error("❌ Error decoding JWT:", err.message);
-  }
-
-  // --- STEP 2: Return test response ---
-  const response = {
-    status: "OK",
+  return res.status(200).json({
     data: {
-      can_connect: true,
-      connected: true,
+      id: "myrover",
+      name: "MyRover Shipping",
       account_status: "active",
+      connected: true,
       message: "Connection verified successfully",
     },
-    messages: [
-      {
-        code: "SUCCESS",
-        text: "Connection successful. MyRover account verified.",
-      },
-    ],
-  };
-
-  console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
-  return res.status(200).json(response);
+  });
 });
 
 
