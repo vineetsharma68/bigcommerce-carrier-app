@@ -1,76 +1,41 @@
 import express from "express";
+import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import fs from "fs";
-import path from "path";
 
 dotenv.config();
-
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// --- Ensure /logs directory exists ---
-const LOG_DIR = path.join(process.cwd(), "logs");
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR);
-  console.log("🪵 Created logs directory");
-}
-
-// --- Utility: simple log writer ---
-function logToFile(filename, data) {
-  const filePath = path.join(LOG_DIR, filename);
-  const timestamp = new Date().toISOString();
-  const entry = `[${timestamp}] ${JSON.stringify(data, null, 2)}\n\n`;
-  fs.appendFileSync(filePath, entry);
-}
-
-// --- Root health check ---
+// ✅ HEALTH CHECK
 app.get("/", (req, res) => {
-  res.send("✅ MyRover Carrier App is Running (Debug Mode Enabled)");
+  res.send("🚚 MyRover Carrier API is live");
 });
 
-// --- OAuth callback ---
-app.get("/api/auth/callback", (req, res) => {
-  console.log("🔐 Auth Callback hit:", req.query);
-  logToFile("auth_callback.log", { query: req.query });
-  res.json({ success: true });
-});
-
-// --- Load / Uninstall handlers ---
-app.get("/api/load", (req, res) => {
-  console.log("🟢 App Loaded");
-  res.send("App Loaded");
-});
-
-app.get("/api/uninstall", (req, res) => {
-  console.log("🔴 App Uninstalled");
-  res.send("App Uninstalled");
-});
-
-// ✅ 1️⃣ Validate Connection (Test Connection)
+// ✅ TEST CONNECTION (BigCommerce calls this when configuring)
 app.post("/v1/shipping/connection", (req, res) => {
-  console.log("✅ /v1/shipping/connection HIT from BigCommerce");
-  logToFile("connection.log", { headers: req.headers, body: req.body });
+  try {
+    console.log("✅ /v1/shipping/connection HIT from BigCommerce");
+    console.log("HEADERS:", req.headers);
+    console.log("BODY:", req.body);
 
-  res.status(200).json({
-    valid: true,
-    messages: [
-      {
-        code: "SUCCESS",
-        text: "Connection successful. MyRover account verified.",
-      },
-    ],
-  });
+    // Always respond with a simple valid JSON object
+    res.status(200).json({});
+  } catch (err) {
+    console.error("❌ Error in /v1/shipping/connection:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-// ✅ 2️⃣ Return Shipping Rates
+// ✅ SHIPPING RATES (BigCommerce calls this at checkout)
 app.post("/v1/shipping/rates", (req, res) => {
-  console.log("📦 /v1/shipping/rates HIT from BigCommerce");
-  logToFile("rates.log", { headers: req.headers, body: req.body });
+  try {
+    console.log("✅ /v1/shipping/rates HIT from BigCommerce");
+    console.log("BODY:", JSON.stringify(req.body, null, 2));
 
-  const ratesResponse = {
-    data: [
+    // ✅ Sample rate response format BigCommerce expects
+    const rates = [
       {
         carrier_id: 530,
         carrier_code: "myrover",
@@ -82,23 +47,20 @@ app.post("/v1/shipping/rates", (req, res) => {
         transit_time: "1–2 business days",
         description: "Fast local delivery via MyRover",
       },
-    ],
-    valid: true,
-    messages: [],
-  };
+    ];
 
-  res.status(200).json(ratesResponse);
+    res.status(200).json({ data: rates });
+  } catch (err) {
+    console.error("❌ Error in /v1/shipping/rates:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
-// --- Debug route to verify uptime ---
-app.get("/debug/test", (req, res) => {
-  res.json({
-    success: true,
-    timestamp: new Date().toISOString(),
-  });
+// ✅ FALLBACK HANDLER
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
 });
 
-// --- Start server ---
 app.listen(PORT, () => {
-  console.log(`🚀 MyRover Carrier running on port ${PORT}`);
+  console.log(`🚀 MyRover Carrier API running on port ${PORT}`);
 });
