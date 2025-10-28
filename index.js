@@ -260,20 +260,36 @@ app.get("/api/load", (req, res) => {
   res.status(200).json(response);
 });*/
 
-app.post("/api/check", (req, res) => {
+app.post("/api/check", async (req, res) => {
   console.log("✅ /api/check HIT: Account Status Check");
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
 
-  const response = {
-    data: {
-      account_status: "active",
-      connected: true,
-      message: "Connection verified successfully"
-    }
-  };
+  try {
+    const response = {
+      data: {
+        id: "myrover",               // ✅ REQUIRED by BigCommerce
+        name: "MyRover Shipping",    // ✅ REQUIRED by BigCommerce
+        account_status: "active",    // must be 'active'
+        connected: true,
+        message: "Connection verified successfully",
+      },
+    };
 
-  console.log("🚀 Sending Response:", response);
-  res.status(200).json(response);
+    console.log("🚀 Sending Response:", JSON.stringify(response, null, 2));
+    return res.status(200).json(response);
+
+  } catch (error) {
+    console.error("❌ Error in /api/check:", error);
+    return res.status(500).json({
+      data: {
+        status: "error",
+        message: "Failed to verify account connection",
+      },
+    });
+  }
 });
+
 
 
 
