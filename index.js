@@ -101,6 +101,41 @@ app.post("/v1/shipping/rates", async (req, res) => {
 // 🧾 Register Metadata
 async function registerMetadata(storeHash, token) {
   const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
+  const payload = {
+    data: [
+      { key: "shipping_connection", value: "/v1/shipping/connection" },
+      { key: "shipping_rates", value: "/v1/shipping/rates" }
+    ]
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (e) {
+    console.warn("⚠️ Could not parse metadata response body");
+  }
+
+  if (!response.ok) {
+    console.error(`❌ Metadata registration failed: ${response.status}`, data);
+    return data;
+  }
+
+  console.log("✅ Metadata registered successfully:", data);
+  return data;
+}
+
+/*async function registerMetadata(storeHash, token) {
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
   const metadata = [
     { key: "shipping_connection", value: "/v1/shipping/connection" },
     { key: "shipping_rates", value: "/v1/shipping/rates" }
@@ -124,7 +159,7 @@ async function registerMetadata(storeHash, token) {
 
   console.log("✅ Metadata registered:", data);
   return data;
-}
+}*/
 
 // 🧩 Debug Route — Test Stored Token
 app.get("/debug/test", (req, res) => {
