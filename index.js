@@ -134,7 +134,13 @@ async function registerMetadata(storeHash, token) {
   return data;
 }
 
-
+// 🧩 Debug Route — Test Stored Token
+app.get("/debug/test", (req, res) => {
+  const storeHash = req.query.store;
+  const token = storeTokens.get(storeHash);
+  if (!token) return res.json({ error: "No token or store hash loaded in memory" });
+  res.json({ success: true, store: storeHash, token });
+});
 
 // 🧩 Debug Route — Force Register Metadata
 
