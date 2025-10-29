@@ -99,6 +99,14 @@ app.get("/auth/callback", (req, res) => {
   res.status(200).send("Auth callback received successfully");
 });
 
+
+// ✅ Handle both callback routes (/auth/callback and /api/auth/callback)
+app.get("/api/auth/callback", (req, res) => {
+  log("✅ /api/auth/callback HIT");
+  res.status(200).send("API Auth callback received successfully");
+});
+
+
 //
 // ✅ Step 3: BigCommerce loads app (after install / open in control panel)
 //
