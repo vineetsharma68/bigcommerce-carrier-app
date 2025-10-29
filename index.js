@@ -1,6 +1,7 @@
 import express from "express";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import axios from "axios";
 
 dotenv.config();
 const axios = axios();
