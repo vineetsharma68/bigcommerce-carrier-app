@@ -3,7 +3,6 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 
 dotenv.config();
-const bodyParser = require("body-parser");
 const axios = require("axios");
 const app = express();
 app.use(express.json());
