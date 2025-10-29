@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 
 dotenv.config();
-const axios = require("axios");
+const axios = axios();
 const app = express();
 app.use(express.json());
 
