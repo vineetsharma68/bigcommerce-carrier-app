@@ -310,14 +310,24 @@ app.get("/api/test-myrover", async (req, res) => {
 
 
 // Load Callback (केवल App iframe लोड होने पर)
-app.get("/api/load", (req, res) => {
+/*app.get("/api/load", (req, res) => {
   console.log("✅ /api/load HIT");
     // यहां आपका App UI/Settings पेज रेंडर होना चाहिए, JSON नहीं।
     // यह endpoint सीधे BigCommerce App iframe में लोड होता है।
     res.send("<h1>Welcome to MyRover Settings</h1><p>Carrier configured successfully!</p>");
+});*/
+
+app.get("/api/load", (req, res) => {
+  log("✅ /api/load HIT from BigCommerce");
+  res.status(200).send(`
+    <html>
+      <body style="font-family: sans-serif; text-align:center; margin-top:40px;">
+        <h2>🎉 MyRover Installed Successfully!</h2>
+        <p>You can now configure <b>MyRover</b> under Settings → Shipping → Carriers.</p>
+      </body>
+    </html>
+  `);
 });
-
-
 // ✅ 7️⃣ Health check route
 app.get("/api/check", (req, res) => {
   res.json({ success: true, message: "Carrier App connection OK ✅" });
