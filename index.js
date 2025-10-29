@@ -178,99 +178,78 @@ app.get("/v1/metadata", async (req, res) => {
 
 
 
-
-// ✅ 5️⃣ Fetch available MyRover services
-app.get("/api/myrover/services", async (req, res) => {
-  try {
-    const response = await axios.post("https://apis.myrover.io/GetServices", {}, {
-      headers: {
-        Authorization: process.env.MYROVER_API_KEY,
-        "Content-Type": "application/json",
-      },
-    });
-
-    console.log("📦 MyRover Services:", response.data);
-    res.json({
-      success: true,
-      message: "Fetched available services from MyRover",
-      data: response.data,
-    });
-  } catch (err) {
-    console.error("❌ Error fetching MyRover services:", err.response?.data || err.message);
-    res.status(500).json({
-      success: false,
-      error: err.response?.data || err.message,
-    });
-  }
-});
-
-
-// ✅ 6️⃣ Shipping Rates endpoint (BigCommerce calls this URL)
 app.post("/api/rates", async (req, res) => {
   const { origin, destination, items } = req.body;
   console.log("📦 Rate request received:", { origin, destination, items });
 
+  if (!process.env.MYROVER_API_KEY) {
+    console.warn("MYROVER_API_KEY not set, returning dummy rates.");
+    return res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ]
+    });
+  }
+
   try {
-    // Fetch MyRover services dynamically (to get service IDs)
-    const serviceRes = await axios.post("https://apis.myrover.io/GetServices", {}, {
-      headers: {
-        Authorization: process.env.MYROVER_API_KEY,
-        "Content-Type": "application/json",
-      },
+    // 1️⃣ Get enabled services
+    const servicesResp = await axios.get("https://apis.myrover.io/GetServices", {
+      headers: { "Authorization": process.env.MYROVER_API_KEY }
     });
 
-    const services = serviceRes.data?.services || [];
-    console.log(`✅ Found ${services.length} MyRover services`);
+    const enabledServices = servicesResp.data?.services || [];
+    if (enabledServices.length === 0) {
+      throw new Error("No enabled MyRover services");
+    }
 
-    // Test only first available service for demo (you can extend this)
-    const service = services[0];
-    console.log("🧩 Using service:", service);
+    const rates = [];
 
-    // Fake pickup/drop addresses for test — later map them dynamically
-    const pickupAddress = "100 Dundas St W, Toronto, ON";
-    const dropAddress = "200 King St W, Toronto, ON";
+    // 2️⃣ Loop through all enabled services
+    for (let service of enabledServices) {
+      try {
+        const payload = { origin, destination, items, service_type: service.abbreviation };
 
-    // MyRover GetPrice API call
-    const priceRes = await axios.post(
-      "https://apis.myrover.io/GetPrice",
-      {
-        service_id: service.id,
-        priority_id: 1,
-        pickup_address: pickupAddress,
-        drop_address: dropAddress,
-      },
-      {
-        headers: {
-          Authorization: process.env.MYROVER_API_KEY,
-          "Content-Type": "application/json",
-        },
+        const response = await axios.post(
+          "https://apis.myrover.io/GetPrice",
+          payload,
+          { headers: { "Authorization": process.env.MYROVER_API_KEY, "Content-Type": "application/json" } }
+        );
+
+        const rateData = response.data?.rates || [];
+        rateData.forEach(rate => {
+          rates.push({
+            carrier_quote: {
+              code: rate.service_code || service.abbreviation,
+              display_name: rate.service_name || service.name || service.name,
+              cost: rate.price || 10.5
+            }
+          });
+        });
+
+      } catch (err) {
+        console.warn(`❌ Service ${service.abbreviation} failed:`, err.response?.data || err.message);
+        // Skip failed service
       }
-    );
+    }
 
-    console.log("💰 MyRover Price Response:", priceRes.data);
-
-    const cost = priceRes.data?.data?.cost || 15.0;
-
-    const rates = [
-      {
-        carrier_quote: {
-          code: service.abbreviation || "myrover",
-          display_name: service.name || "MyRover Shipping",
-          cost: cost,
-        },
-      },
-    ];
+    // 3️⃣ If no valid rates, send fallback
+    if (rates.length === 0) {
+      rates.push(
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      );
+    }
 
     res.json({ data: rates });
+
   } catch (err) {
     console.error("❌ MyRover API error:", err.response?.data || err.message);
-
-    // fallback dummy rates
     res.json({
       data: [
         { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
-      ],
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } }
+      ]
     });
   }
 });
