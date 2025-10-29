@@ -137,6 +137,42 @@ async function registerMetadata(storeHash, token) {
 
 
 // 🧩 Debug Route — Force Register Metadata
+async function registerMetadata(storeHash, token) {
+  const url = `https://api.bigcommerce.com/api/stores/${storeHash}/v3/app/metadata`;
+  const payload = {
+    data: [
+      { key: "shipping_connection", value: "/v1/shipping/connection" },
+      { key: "shipping_rates", value: "/v1/shipping/rates" }
+    ]
+  };
+
+  console.log("🧠 Registering metadata at:", url);
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    console.warn("⚠️ Could not parse metadata response body");
+  }
+
+  if (!response.ok) {
+    console.error(`❌ Metadata registration failed: ${response.status} ${response.statusText}`, data);
+  } else {
+    console.log("✅ Metadata registered successfully:", data);
+  }
+
+  return data;
+}
 
 
 app.get("/v1/metadata", async (req, res) => {
