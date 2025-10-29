@@ -326,7 +326,7 @@ app.get("/api/load", (req, res) => {
         <p>You can now configure <b>MyRover</b> under Settings → Shipping → Carriers.</p>
       </body>
     </html>
-  `";
+  ";
 });
 // ✅ 7️⃣ Health check route
 app.get("/api/check", (req, res) => {
