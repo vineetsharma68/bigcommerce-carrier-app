@@ -319,14 +319,14 @@ app.get("/api/test-myrover", async (req, res) => {
 
 app.get("/api/load", (req, res) => {
   log("✅ /api/load HIT from BigCommerce");
-  res.status(200).send(`
+  res.status(200).send("
     <html>
-      <body style="font-family: sans-serif; text-align:center; margin-top:40px;">
+      <body style='font-family: sans-serif; text-align:center; margin-top:40px;'>
         <h2>🎉 MyRover Installed Successfully!</h2>
         <p>You can now configure <b>MyRover</b> under Settings → Shipping → Carriers.</p>
       </body>
     </html>
-  `);
+  `";
 });
 // ✅ 7️⃣ Health check route
 app.get("/api/check", (req, res) => {
