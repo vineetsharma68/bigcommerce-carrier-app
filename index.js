@@ -207,77 +207,72 @@ app.get("/api/myrover/services", async (req, res) => {
 
 // ✅ 6️⃣ Shipping Rates endpoint (BigCommerce calls this URL)
 app.post("/api/rates", async (req, res) => {
-  const { origin, destination, items } = req.body;
-  console.log("📦 Rate request received:", { origin, destination, items });
+  const { origin, destination, items } = req.body;
+  console.log("📦 Rate request received:", { origin, destination, items });
 
-    // NOTE: आपको यहां BigCommerce से storeHash प्राप्त करने के लिए एक तरीका लागू करना होगा
-    // ताकि आप उस स्टोर के लिए database से access_token ला सकें।
-    // सुरक्षा कारणों से, BigCommerce rates call में storeHash नहीं भेजता है।
-    
-  try {
-    // Fetch MyRover services dynamically (to get service IDs)
-    const serviceRes = await axios.post("https://apis.myrover.io/GetServices", {}, {
-      headers: {
-        Authorization: process.env.MYROVER_API_KEY,
-        "Content-Type": "application/json",
-      },
-    });
+  try {
+    // Fetch MyRover services dynamically (to get service IDs)
+    const serviceRes = await axios.post("https://apis.myrover.io/GetServices", {}, {
+      headers: {
+        Authorization: process.env.MYROVER_API_KEY,
+        "Content-Type": "application/json",
+      },
+    });
 
-    const services = serviceRes.data?.services || [];
-    console.log(`✅ Found ${services.length} MyRover services`);
+    const services = serviceRes.data?.services || [];
+    console.log(`✅ Found ${services.length} MyRover services`);
 
-    // Test only first available service for demo (you can extend this)
-    const service = services[0];
-    console.log("🧩 Using service:", service);
+    // Test only first available service for demo (you can extend this)
+    const service = services[0];
+    console.log("🧩 Using service:", service);
 
-    // Fake pickup/drop addresses for test — later map them dynamically
-    const pickupAddress = "100 Dundas St W, Toronto, ON";
-    const dropAddress = "200 King St W, Toronto, ON";
+    // Fake pickup/drop addresses for test — later map them dynamically
+    const pickupAddress = "100 Dundas St W, Toronto, ON";
+    const dropAddress = "200 King St W, Toronto, ON";
 
-    // MyRover GetPrice API call
-    const priceRes = await axios.post(
-      "https://apis.myrover.io/GetPrice",
-      {
-        service_id: service.id,
-        priority_id: 1,
-        pickup_address: pickupAddress,
-        drop_address: dropAddress,
-      },
-      {
-        headers: {
-          Authorization: process.env.MYROVER_API_KEY,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // MyRover GetPrice API call
+    const priceRes = await axios.post(
+      "https://apis.myrover.io/GetPrice",
+      {
+        service_id: service.id,
+        priority_id: 1,
+        pickup_address: pickupAddress,
+        drop_address: dropAddress,
+      },
+      {
+        headers: {
+          Authorization: process.env.MYROVER_API_KEY,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    console.log("💰 MyRover Price Response:", priceRes.data);
+    console.log("💰 MyRover Price Response:", priceRes.data);
 
-    const cost = priceRes.data?.data?.cost || 15.0;
+    const cost = priceRes.data?.data?.cost || 15.0;
 
-    const rates = [
-      {
-        carrier_quote: {
-          code: service.abbreviation || "myrover",
-          display_name: service.name || "MyRover Shipping",
-          cost: cost,
-        },
-      },
-    ];
+    const rates = [
+      {
+        carrier_quote: {
+          code: service.abbreviation || "myrover",
+          display_name: service.name || "MyRover Shipping",
+          cost: cost,
+        },
+      },
+    ];
 
-    // BigCommerce को rates लौटाएँ
-    res.json({ data: rates });
-  } catch (err) {
-    console.error("❌ MyRover API error:", err.response?.data || err.message);
+    res.json({ data: rates });
+  } catch (err) {
+    console.error("❌ MyRover API error:", err.response?.data || err.message);
 
-    // fallback dummy rates
-    res.json({
-      data: [
-        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
-        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
-      ],
-    });
-  }
+    // fallback dummy rates
+    res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
+      ],
+    });
+  }
 });
 
 // Test MyRover API key
