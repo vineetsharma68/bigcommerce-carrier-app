@@ -311,6 +311,11 @@ app.get("/api/load", (req, res) => {
 });
 
 
+// ✅ 7️⃣ Health check route
+app.get("/api/check", (req, res) => {
+  res.json({ success: true, message: "Carrier App connection OK ✅" });
+});
+
 
 
 
