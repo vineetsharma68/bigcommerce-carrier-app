@@ -141,52 +141,10 @@ app.get("/api/auth/callback", async (req, res) => {
 
 // API check - called by BigCommerce app UI in some flows
 app.post("/api/check", (req, res) => {
-  log("/api/check HIT from BigCommerce headers:", req.headers["user-agent"]);
-  // Respond with simple success structure
-  /*return res.status(200).json({
-    status: "OK",
-    data: {
-      can_connect: true,
-      connected: true,
-      account_status: "active",
-      message: "Connection verified successfully",
-    },
-    messages: [{ code: "SUCCESS", text: "Connection successful. MyRover verified." }],
-  });*/
-
-log("Headers:", JSON.stringify(req.headers));
-  log("Body:", JSON.stringify(req.body));
-
-  // BigCommerce sends the connection configuration (merchant inputs) in body.
-  // Accept flexible shapes: either req.body.connection_options or direct keys.
-  const body = req.body || {};
-  const connectionOptions = body.connection_options || body; // support both shapes
-
-  // Validate required keys if you defined them in metadata
-  const api_token = connectionOptions.api_token || connectionOptions.apiToken || connectionOptions.apiToken;
-  const account_key = connectionOptions.account_key || connectionOptions.accountKey || connectionOptions.account_key;
-
-  if (!api_token || !account_key) {
-    // BigCommerce expects 200 with JSON, but we can return 400 so UI shows error message.
-    log("Missing required connection params:", { api_token: !!api_token, account_key: !!account_key });
-    return res.status(400).json({
-      status: "FAIL",
-      data: { can_connect: false },
-      messages: [{ code: "MISSING_CONFIG", text: "Missing required API Token or Account Key" }],
-    });
-  }
-
-  // Optionally test the token against MyRover API here. For now, reply with OK.
-  return res.status(200).json({
-    status: "OK",
-    message: "Connection verified successfully",
-    data: {
-      account_status: "active",
-      connected: true,
-    },
-  });
-  
+  console.log("✅ /api/check HIT from BigCommerce");
+  res.status(200).json({});
 });
+
 
 // v1 metadata endpoint - what BigCommerce calls to learn what to show in UI
 app.get("/v1/metadata", (req, res) => {
