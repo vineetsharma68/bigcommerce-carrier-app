@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import axios from "axios";
 
 dotenv.config();
-const axios = axios();
 const app = express();
 app.use(express.json());
 
