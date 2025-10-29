@@ -45,15 +45,11 @@ async function exchangeCodeForToken(code, context, scope) {
 }
 
 async function registerMetadataToStore(storeHash, token) {
-  // BigCommerce expects an array of metadata objects or v3 structure.
-  // We'll push a simple app metadata array that indicates carrier endpoints and configuration schema.
   const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
 
-  // Example metadata: can be adjusted if BC expects different shape for your environment
   const metadata = [
     { key: "shipping_connection", value: "/v1/shipping/connection" },
     { key: "shipping_rates", value: "/v1/shipping/rates" },
-    // You can add more keys or structured JSON strings if required
   ];
 
   const resp = await fetch(url, {
@@ -66,15 +62,18 @@ async function registerMetadataToStore(storeHash, token) {
     body: JSON.stringify(metadata),
   });
 
+  // Safe JSON parse attempt
   let data;
   try {
-    data = await resp.json();
-  } catch (e) {
-    const text = await resp.text();
-    data = { raw: text };
+    const text = await resp.text(); // read once
+    data = JSON.parse(text || "{}"); // try to parse JSON, fallback
+  } catch (err) {
+    data = { raw: "Unparseable response" };
   }
+
   return { ok: resp.ok, status: resp.status, data };
 }
+
 
 // ---------- ROUTES ----------
 
