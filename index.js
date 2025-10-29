@@ -45,7 +45,7 @@ async function exchangeCodeForToken(code, context, scope) {
 }
 
 async function registerMetadataToStore(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
+  const url = `https://api.bigcommerce.com/${storeHash}/v3/app/metadata`;
 
   const metadata = [
     { key: "shipping_connection", value: "/v1/shipping/connection" },
