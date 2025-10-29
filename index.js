@@ -317,15 +317,20 @@ app.get("/api/load", (req, res) => {
     res.send("<h1>Welcome to MyRover Settings</h1><p>You can now configure <b>MyRover</b> under Settings → Shipping → Carriers.</p>");
 });
 
-/*app.get("/api/load", (req, res) => {
-  console.log("✅ /api/load HIT from BigCommerce");
-  res.send("<h2>🎉 MyRover Installed Successfully!</h2>
-        <p>You can now configure <b>MyRover</b> under Settings → Shipping → Carriers.</p>"
-    );
-});*/
-// ✅ 7️⃣ Health check route
-app.get("/api/check", (req, res) => {
-  res.json({ success: true, message: "Carrier App connection OK ✅" });
+
+// ============ 5️⃣ CARRIER CHECK ============
+app.post("/api/check", (req, res) => {
+  log("/api/check HIT from BigCommerce headers:", req.headers["user-agent"]);
+  return res.status(200).json({
+    status: "OK",
+    data: {
+      can_connect: true,
+      connected: true,
+      account_status: "active",
+      message: "Connection verified successfully",
+    },
+    messages: [{ code: "SUCCESS", text: "Connection successful. MyRover verified." }],
+  });
 });
 
 
