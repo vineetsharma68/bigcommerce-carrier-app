@@ -320,7 +320,7 @@ app.get("/api/load", (req, res) => {
 
 // ============ 5️⃣ CARRIER CHECK ============
 app.post("/api/check", (req, res) => {
-  log("/api/check HIT from BigCommerce headers:", req.headers["user-agent"]);
+  console.log("/api/check HIT from BigCommerce headers:", req.headers["user-agent"]);
   return res.status(200).json({
     status: "OK",
     data: {
@@ -332,6 +332,7 @@ app.post("/api/check", (req, res) => {
     messages: [{ code: "SUCCESS", text: "Connection successful. MyRover verified." }],
   });
 });
+
 
 
 
