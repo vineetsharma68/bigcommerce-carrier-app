@@ -134,40 +134,7 @@ async function registerMetadata(storeHash, token) {
   return data;
 }
 
-/*async function registerMetadata(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
-  const metadata = [
-    { key: "shipping_connection", value: "/v1/shipping/connection" },
-    { key: "shipping_rates", value: "/v1/shipping/rates" }
-  ];
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "X-Auth-Token": token,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify(metadata)
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    console.error("❌ Metadata registration failed:", data);
-    return data;
-  }
-
-  console.log("✅ Metadata registered:", data);
-  return data;
-}*/
-
-// 🧩 Debug Route — Test Stored Token
-app.get("/debug/test", (req, res) => {
-  const storeHash = req.query.store;
-  const token = storeTokens.get(storeHash);
-  if (!token) return res.json({ error: "No token or store hash loaded in memory" });
-  res.json({ success: true, store: storeHash, token });
-});
 
 // 🧩 Debug Route — Force Register Metadata
 
