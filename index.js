@@ -1,162 +1,182 @@
-require("dotenv").config();
-const express = require("express");
-const bodyParser = require("body-parser");
-const axios = require("axios");
+import express from "express";
+import fetch from "node-fetch";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 
-// --- CONSTANTS ---
-const API_BASE_URL = "https://api.bigcommerce.com/stores";
-const MY_CARRIER_ID = "myrover_carrier"; // आपके मेटाडेटा के साथ मेल खाना चाहिए
-const MY_RATE_URL = `${process.env.APP_URL}/api/rates`; 
-const MY_DISPLAY_NAME = "MyRover Shipping";
+// 🔑 Environment Variables
+const CLIENT_ID = process.env.BC_CLIENT_ID;
+const CLIENT_SECRET = process.env.BC_CLIENT_SECRET;
+const APP_URL = process.env.APP_URL; // e.g. https://myrover-carrier.onrender.com
+const PORT = process.env.PORT || 3000;
 
+// 🧠 In-memory store for tokens (for testing)
+const storeTokens = new Map();
 
-// ----------------------------------------------------------------------
-// CARRIER MANAGEMENT HELPER FUNCTION
-// ----------------------------------------------------------------------
-
-/**
- * Checks for and registers/updates the Carrier Object in BigCommerce.
- */
-async function manageBcCarrierConnection(storeHash, accessToken) {
-    
-    // Placeholder function: API calls require these headers
-    const headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-Auth-Token": accessToken, 
-    };
-    
-    const apiEndpoint = `${API_BASE_URL}/${storeHash}/v2/shipping/carrier/connections`;
-
-    // 1. GET: मौजूदा कनेक्शनों की जाँच करें
-    try {
-        const checkResponse = await axios.get(apiEndpoint, { headers });
-        const existingConnections = checkResponse.data;
-
-        let existingBcId = null;
-        for (const carrier of existingConnections) {
-            if (carrier.carrier_id === MY_CARRIER_ID) {
-                existingBcId = carrier.id;
-                break;
-            }
-        }
-
-        const carrierPayload = {
-            carrier_id: MY_CARRIER_ID,
-            display_name: MY_DISPLAY_NAME,
-            type: "rate_calculator",
-            rate_url: MY_RATE_URL, 
-            // validation_url: `${process.env.APP_URL}/api/validate`, // अगर आप Validation Endpoint जोड़ते हैं
-        };
-
-        if (existingBcId) {
-            // 2. PUT: अगर कनेक्शन मिल गया, तो अपडेट करें
-            await axios.put(`${apiEndpoint}/${existingBcId}`, carrierPayload, { headers });
-            console.log(`✅ Carrier ID ${existingBcId} updated (PUT).`);
-            
-        } else {
-            // 3. POST: अगर कनेक्शन नहीं मिला, तो नया बनाएँ
-            const createResponse = await axios.post(apiEndpoint, carrierPayload, { headers });
-            console.log(`✅ New Carrier connection created (POST): ID ${createResponse.data.id}`);
-        }
-    } catch (error) {
-        // यहाँ error को throw करना महत्वपूर्ण है ताकि App installation fail हो जाए यदि Carrier setup fail होता है
-        console.error("❌ Carrier Connection Management Failed:", error.response?.data || error.message);
-        throw new Error("BigCommerce Carrier setup failed during installation.");
-    }
-}
-
-/**
- * Placeholder for saving credentials to your database (DB).
- * NOTE: You MUST implement this function to store tokens securely.
- */
-async function saveStoreCredentialsToDB(storeHash, accessToken) {
-    // Implement your database logic here (e.g., using Mongoose/Sequelize)
-    console.log(`🔒 Credentials saved for store: ${storeHash}`);
-    // Example: await db.collection('stores').updateOne({ hash: storeHash }, { $set: { token: accessToken } }, { upsert: true });
-}
-
-// ----------------------------------------------------------------------
-// EXPRESS ROUTES
-// ----------------------------------------------------------------------
-
-// ✅ 1️⃣ Home route
-app.get("/", (req, res) => {
-  res.send("🚀 MyRover Carrier App is running successfully!");
+// 🔐 Step 1: Installation URL (OAuth Initiation)
+app.get("/api/install", (req, res) => {
+  const { context, scope } = req.query;
+  const redirect = `https://login.bigcommerce.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=${scope}&redirect_uri=${APP_URL}/api/auth/callback&response_type=code&context=${context}`;
+  res.redirect(redirect);
 });
 
-
-// ✅ 2️⃣ OAuth Step 1 - BigCommerce authorization
-app.get("/api/auth", async (req, res) => {
-  console.log("✅ OAuth Step 1 triggered", req.query);
-
-  const { context } = req.query;
-  if (!context) return res.status(400).send("❌ Missing store context");
-
-  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
-
-  // Redirect to BigCommerce OAuth login
-  const installUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${process.env.CLIENT_ID}&scope=${encodeURIComponent("store_v2_orders store_v2_information store_v2_shipping")}&redirect_uri=${encodeURIComponent(
-    redirectUri
-  )}&response_type=code&context=${context}`;
-
-  res.redirect(installUrl);
-});
-
-
-// ✅ 3️⃣ OAuth Step 2 - Callback from BigCommerce (MODIFIED)
+// 🔑 Step 2: OAuth Callback
 app.get("/api/auth/callback", async (req, res) => {
-  console.log("✅ OAuth Callback triggered:", req.query);
+  try {
+    const { code, context, scope } = req.query;
+    if (!code || !context) throw new Error("Missing code or context");
 
-  const { code, scope, context } = req.query;
-  if (!code) return res.status(400).send("❌ Missing OAuth code");
+    const storeHash = context.replace("stores/", "");
+    const tokenUrl = `https://login.bigcommerce.com/oauth2/token`;
 
-  try {
-    const tokenResponse = await axios.post("https://login.bigcommerce.com/oauth2/token", {
-      client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      redirect_uri: `${process.env.APP_URL}/api/auth/callback`,
-      grant_type: "authorization_code",
-      code,
-      scope,
-      context,
-    });
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        redirect_uri: `${APP_URL}/api/auth/callback`,
+        grant_type: "authorization_code",
+        code,
+        scope,
+        context
+      })
+    });
 
-    // --- NEW LOGIC: Extract Tokens and Manage Carrier ---
-    const { access_token } = tokenResponse.data;
-    // context format: "stores/xxxxxx"
-    const storeHash = context.split('/')[1]; 
+    const data = await response.json();
+    if (data.error) throw new Error(JSON.stringify(data));
 
-    // A. क्रेडेंशियल्स सहेजें (फ्यूचर API कॉल्स के लिए)
-    await saveStoreCredentialsToDB(storeHash, access_token); 
+    const token = data.access_token;
+    storeTokens.set(storeHash, token);
 
-    // B. Carrier Connection की जाँच करें और बनाएँ/अपडेट करें
-    await manageBcCarrierConnection(storeHash, access_token);
+    console.log(`✅ Access token stored for store: ${storeHash}`);
+    await registerMetadata(storeHash, token);
 
-    // C. सफलता पर App UI या डैशबोर्ड पर रीडायरेक्ट करें
-    console.log("✅ App installed and Carrier configured successfully!");
-    
-    // मर्चेंट को अपने App के UI में रीडायरेक्ट करें (उदाहरण के लिए /dashboard)
-    res.redirect(`${process.env.APP_URL}/dashboard?store_hash=${storeHash}`); 
-    // यदि आपके पास UI नहीं है, तो आप बस res.send("Success") कर सकते हैं
-    // res.send("✅ App installed successfully! You can close this window now.");
+    res.send(`<h2>✅ MyRover Installed Successfully!</h2>
+              <p>Store: ${storeHash}</p>`);
+  } catch (err) {
+    console.error("❌ OAuth callback failed:", err.message);
+    res.status(400).json({ error: "OAuth callback failed", details: err.message });
+  }
+});
 
-  } catch (err) {
-    console.error("❌ App Installation/OAuth/Carrier Setup Error:", err.response?.data || err.message);
-    res.status(500).send("App Installation failed. Check server logs.");
-  }
+// 🚚 BigCommerce Test Connection Endpoint
+app.post("/v1/shipping/connection", (req, res) => {
+  console.log("✅ /v1/shipping/connection HIT from BigCommerce");
+  return res.status(200).json({
+    status: "OK",
+    message: "MyRover connection verified successfully"
+  });
+});
+
+// 📦 Get Shipping Rates Endpoint
+app.post("/v1/shipping/rates", async (req, res) => {
+  console.log("📦 /v1/shipping/rates HIT from BigCommerce");
+  try {
+    const rateResponse = {
+      data: [
+        {
+          carrier_id: 530,
+          carrier_code: "myrover",
+          carrier_name: "MyRover Express",
+          rate_id: "MYROVER_STANDARD",
+          rate_name: "MyRover Delivery (1–2 Days)",
+          cost: 9.99,
+          currency: "CAD",
+          transit_time: "1–2 business days",
+          description: "Fast local delivery via MyRover"
+        }
+      ]
+    };
+    res.status(200).json(rateResponse);
+  } catch (err) {
+    console.error("❌ Error in /rates:", err);
+    res.status(500).json({ error: "Failed to fetch rates" });
+  }
+});
+
+// 🧾 Register Metadata
+async function registerMetadata(storeHash, token) {
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
+  const metadata = [
+    { key: "shipping_connection", value: "/v1/shipping/connection" },
+    { key: "shipping_rates", value: "/v1/shipping/rates" }
+  ];
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-Auth-Token": token,
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    },
+    body: JSON.stringify(metadata)
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    console.error("❌ Metadata registration failed:", data);
+    return data;
+  }
+
+  console.log("✅ Metadata registered:", data);
+  return data;
+}
+
+// 🧩 Debug Route — Test Stored Token
+app.get("/debug/test", (req, res) => {
+  const storeHash = req.query.store;
+  const token = storeTokens.get(storeHash);
+  if (!token) return res.json({ error: "No token or store hash loaded in memory" });
+  res.json({ success: true, store: storeHash, token });
+});
+
+// 🧩 Debug Route — Force Register Metadata
+
+
+app.get("/v1/metadata", async (req, res) => {
+  console.log("📦 /v1/metadata HIT from BigCommerce");
+
+  try {
+    const metadata = {
+      meta: {
+        version: "1.0",
+        documentation: "https://myrover.io/docs/carrier-api",
+      },
+      data: {
+        carrier_name: "MyRover Express",
+        carrier_code: "myrover",
+        description: "MyRover Carrier Integration for BigCommerce",
+        supported_methods: [
+          {
+            type: "connection_test",
+            endpoint: "/v1/shipping/connection",
+            method: "POST",
+          },
+          {
+            type: "get_rates",
+            endpoint: "/v1/shipping/rates",
+            method: "POST",
+          }
+        ],
+      },
+    };
+
+    return res.status(200).json({ success: true, result: metadata });
+  } catch (err) {
+    console.error("❌ Metadata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Metadata generation failed",
+      error: err.message,
+    });
+  }
 });
 
 
-// ✅ 4️⃣ Uninstall callback
-app.post("/api/uninstall", (req, res) => {
-  console.log("❌ App Uninstalled:", req.body);
-    // TODO: यहां डेटाबेस से स्टोर क्रेडेंशियल्स हटाएँ!
-  res.send("✅ Uninstall cleanup done.");
-});
 
 
 // ✅ 5️⃣ Fetch available MyRover services
@@ -291,126 +311,9 @@ app.get("/api/load", (req, res) => {
 });
 
 
-// ✅ 7️⃣ Account verification (used by BigCommerce to check status)
-app.post("/api/check-v2", (req, res) => {
-  console.log("✅ /api/check-v2 HIT");
-  return res.status(200).json({ status: "active" });
+
+
+
+app.listen(PORT, () => {
+  console.log(`🚀 MyRover Carrier running on port ${PORT}`);
 });
-
-
-// 🚚 BigCommerce Test Connection Endpoint
-app.post("/v1/shipping/connection", (req, res) => {
-  console.log("✅ /v1/shipping/connection HIT from BigCommerce");
-  return res.status(200).json({
-    status: "OK",
-    message: "MyRover connection verified successfully"
-  });
-});
-
-// 📦 Get Shipping Rates Endpoint
-app.post("/v1/shipping/rates", async (req, res) => {
-  console.log("📦 /v1/shipping/rates HIT from BigCommerce");
-  try {
-    const rateResponse = {
-      data: [
-        {
-          carrier_id: 530,
-          carrier_code: "myrover",
-          carrier_name: "MyRover Express",
-          rate_id: "MYROVER_STANDARD",
-          rate_name: "MyRover Delivery (1–2 Days)",
-          cost: 9.99,
-          currency: "CAD",
-          transit_time: "1–2 business days",
-          description: "Fast local delivery via MyRover"
-        }
-      ]
-    };
-    res.status(200).json(rateResponse);
-  } catch (err) {
-    console.error("❌ Error in /rates:", err);
-    res.status(500).json({ error: "Failed to fetch rates" });
-  }
-});
-
-// 🧾 Register Metadata
-async function registerMetadata(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
-  const metadata = [
-    { key: "shipping_connection", value: "/v1/shipping/connection" },
-    { key: "shipping_rates", value: "/v1/shipping/rates" }
-  ];
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "X-Auth-Token": token,
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    },
-    body: JSON.stringify(metadata)
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    console.error("❌ Metadata registration failed:", data);
-    return data;
-  }
-
-  console.log("✅ Metadata registered:", data);
-  return data;
-}
-
-// 🧩 Debug Route — Test Stored Token
-app.get("/debug/test", (req, res) => {
-  const storeHash = req.query.store;
-  const token = storeTokens.get(storeHash);
-  if (!token) return res.json({ error: "No token or store hash loaded in memory" });
-  res.json({ success: true, store: storeHash, token });
-});
-
-// 🧩 Debug Route — Force Register Metadata
-
-
-app.get("/v1/metadata", async (req, res) => {
-  console.log("📦 /v1/metadata HIT from BigCommerce");
-
-  try {
-    const metadata = {
-      meta: {
-        version: "1.0",
-        documentation: "https://myrover.io/docs/carrier-api",
-      },
-      data: {
-        carrier_name: "MyRover Express",
-        carrier_code: "myrover",
-        description: "MyRover Carrier Integration for BigCommerce",
-        supported_methods: [
-          {
-            type: "connection_test",
-            endpoint: "/v1/shipping/connection",
-            method: "POST",
-          },
-          {
-            type: "get_rates",
-            endpoint: "/v1/shipping/rates",
-            method: "POST",
-          }
-        ],
-      },
-    };
-
-    return res.status(200).json({ success: true, result: metadata });
-  } catch (err) {
-    console.error("❌ Metadata Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Metadata generation failed",
-      error: err.message,
-    });
-  }
-});
-
-// ✅ 9️⃣ Start Server
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
