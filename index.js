@@ -74,26 +74,13 @@ app.post("/v1/shipping/connection", async (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  try {
-    // Here you could validate stored credentials, tokens, etc.
-    // For now, just respond with success:
-    res.status(200).json({
-      data: {
-        can_connect: true,
-        message: "Connection successful.",
-      },
-    });
-  } catch (error) {
-    console.error("Connection test failed:", error);
-    res.status(200).json({
-      data: {
-        can_connect: false,
-        message: "Connection failed: " + error.message,
-      },
-    });
-  }
+  res.status(200).json({
+    data: {
+      can_connect: true,
+      message: "Connection successful."
+    }
+  });
 });
-
 
 
 
