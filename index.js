@@ -69,6 +69,19 @@ app.get("/api/auth/callback", async (req, res) => {
 /*  STEP 2️⃣ BigCommerce Test Connection Endpoint                              */
 /* -------------------------------------------------------------------------- */
 app.post("/v1/shipping/connection", (req, res) => {
+  console.log("✅ Connection HIT from BigCommerce");
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+
+  res.status(200).json({
+    data: {
+      status: "OK",
+      description: "MyRover Carrier connected successfully"
+    }
+  });
+});
+
+/*app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ /v1/shipping/connection HIT from BigCommerce");
   return res.status(200).json({
    data: {
@@ -76,7 +89,7 @@ app.post("/v1/shipping/connection", (req, res) => {
       description: "MyRover Carrier connected successfully"
     }
   });
-});
+});*/
 
 /* -------------------------------------------------------------------------- */
 /*  STEP 3️⃣ Get Shipping Rates Endpoint                                       */
