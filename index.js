@@ -180,41 +180,48 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
-async function registerCarrier(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection/530`;
-
+async function registerMetadata(storeHash, token) {
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
   const payload = {
-    name: "MyRover Carrier",
-    connection_url: "https://myrover-carrier.onrender.com/v1/shipping/connection",
-    settings: {
-      capabilities: ["domestic", "international"],
-      supported_services: ["standard", "express"],
-      developer_mode: true
-    }
+    data: [
+      { key: "shipping_connection", value: "/v1/shipping/connection" },
+      { key: "shipping_rates", value: "/v1/shipping/rates" }
+    ]
   };
 
-  console.log("🚚 Updating carrier configuration for ID 530:", JSON.stringify(payload, null, 2));
-
   const response = await fetch(url, {
-    method: "PUT",
+    method: "POST",
     headers: {
       "X-Auth-Token": token,
       "Content-Type": "application/json",
-      Accept: "application/json",
+      "Accept": "application/json"
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload)
   });
 
-  const data = await response.json().catch(() => ({}));
+  let data = null;
+  try {
+    data = await response.json();
+  } catch (e) {
+    console.warn("⚠️ Could not parse metadata response body");
+  }
 
   if (!response.ok) {
-    console.error(`❌ Carrier update failed: ${response.status}`, data);
+    console.error(`❌ Metadata registration failed: ${response.status}`, data);
     return data;
   }
 
-  console.log("✅ Carrier updated successfully:", data);
+  console.log("✅ Metadata registered successfully:", data);
   return data;
 }
+
+// 🧩 Debug Route — Test Stored Token
+app.get("/debug/test", (req, res) => {
+  const storeHash = req.query.store;
+  const token = storeTokens.get(storeHash);
+  if (!token) return res.json({ error: "No token or store hash loaded in memory" });
+  res.json({ success: true, store: storeHash, token });
+});
 
 
 /* -------------------------------------------------------------------------- */
