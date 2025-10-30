@@ -74,14 +74,22 @@ app.post("/v1/shipping/connection", (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  res.status(200).json({
-    data: {
-      success: true,
-      message: "Connection successful",
-      errors: []
-    }
-  });
+  res
+    .status(200)
+    .set("Content-Type", "application/json")
+    .json({
+      data: {
+        status: "OK",
+        message: "MyRover Carrier connected successfully",
+        timestamp: new Date().toISOString(),
+      },
+      meta: {
+        carrier: "MyRover Carrier",
+        version: "1.0.0",
+      },
+    });
 });
+
 
 
 
