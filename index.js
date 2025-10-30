@@ -179,10 +179,9 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
 async function registerCarrier(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection`;
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection/530`;
 
   const payload = {
-    carrier_id: "myrover_carrier",
     name: "MyRover Carrier",
     connection_url: "https://myrover-carrier.onrender.com/v1/shipping/connection",
     settings: {
@@ -192,10 +191,10 @@ async function registerCarrier(storeHash, token) {
     }
   };
 
-  console.log("🚚 Registering carrier service with BigCommerce:", JSON.stringify(payload, null, 2));
+  console.log("🚚 Updating carrier configuration for ID 530:", JSON.stringify(payload, null, 2));
 
   const response = await fetch(url, {
-    method: "POST",
+    method: "PUT",
     headers: {
       "X-Auth-Token": token,
       "Content-Type": "application/json",
@@ -207,13 +206,14 @@ async function registerCarrier(storeHash, token) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    console.error(`❌ Carrier registration failed: ${response.status}`, data);
+    console.error(`❌ Carrier update failed: ${response.status}`, data);
     return data;
   }
 
-  console.log("✅ Carrier registered successfully:", data);
+  console.log("✅ Carrier updated successfully:", data);
   return data;
 }
+
 
 /* -------------------------------------------------------------------------- */
 /*  STEP 5️⃣ Debug Routes                                                      */
