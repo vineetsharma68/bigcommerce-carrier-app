@@ -69,29 +69,20 @@ app.get("/api/auth/callback", async (req, res) => {
 /*  STEP 2️⃣ BigCommerce Test Connection Endpoint                              */
 /* -------------------------------------------------------------------------- */
 // Handle both GET and POST for BigCommerce connection test
-app.post("/v1/shipping/connection", async (req, res) => {
+app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  try {
-    // ✅ Respond in the format BigCommerce expects
-    return res.status(200).json({
-      data: {
-        can_connect: true,
-        message: "Connection successful."
-      }
-    });
-  } catch (err) {
-    console.error("❌ Connection error:", err);
-    return res.status(500).json({
-      data: {
-        can_connect: false,
-        message: "Internal error"
-      }
-    });
-  }
+  res.status(200).json({
+    data: {
+      success: true,
+      message: "Connection successful",
+      errors: []
+    }
+  });
 });
+
 
 
 
@@ -209,35 +200,26 @@ app.post("/v1/shipping/connection", async (req, res) => {
 });
 */
 app.post("/v1/shipping/rates", (req, res) => {
-  console.log("✅ Shipping Rate Request from BigCommerce");
+  console.log("✅ Shipping Rates HIT from BigCommerce");
   console.log("Request Body:", req.body);
 
-  // You can customize rate calculation logic here:
-  const rateResponse = {
-    data: [
-      {
-        carrier_id: "myrover",
-        carrier_name: "MyRover Carrier",
-        service_type: "standard",
-        description: "Delivered in 3 business days",
-        rate: 10.00, // BigCommerce expects a number, not cents
-        currency: "CAD",
-        transit_time: "3 business days"
-      },
-      {
-        carrier_id: "myrover",
-        carrier_name: "MyRover Carrier",
-        service_type: "express",
-        description: "Delivered in 1 business day",
-        rate: 25.00,
-        currency: "CAD",
-        transit_time: "1 business day"
-      }
-    ]
-  };
-
-  return res.status(200).json(rateResponse);
+  res.status(200).json({
+    data: {
+      rates: [
+        {
+          carrier_id: "myrover",
+          service_type: "standard",
+          service_name: "Standard Shipping",
+          description: "Delivered in 3 business days",
+          cost: 10.0,
+          currency: "CAD",
+          transit_time: "3 business days"
+        }
+      ]
+    }
+  });
 });
+
 
 // ✅ Root route (optional)
 app.get("/", (req, res) => {
