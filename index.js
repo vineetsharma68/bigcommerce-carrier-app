@@ -71,8 +71,10 @@ app.get("/api/auth/callback", async (req, res) => {
 app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ /v1/shipping/connection HIT from BigCommerce");
   return res.status(200).json({
-    status: "OK",
-    message: "MyRover connection verified successfully",
+   data: {
+      status: "OK",
+      description: "MyRover Carrier connected successfully"
+    }
   });
 });
 
