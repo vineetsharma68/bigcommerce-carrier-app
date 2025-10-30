@@ -209,19 +209,39 @@ app.post("/v1/shipping/connection", async (req, res) => {
 });
 */
 app.post("/v1/shipping/rates", (req, res) => {
-  console.log("📦 Shipping rates requested");
-  res.status(200).json({
-    rates: [
+  console.log("✅ Shipping Rate Request from BigCommerce");
+  console.log("Request Body:", req.body);
+
+  // You can customize rate calculation logic here:
+  const rateResponse = {
+    data: [
       {
-        service_name: "Standard Shipping",
-        service_code: "standard",
-        total_price: 1000,
+        carrier_id: "myrover",
+        carrier_name: "MyRover Carrier",
+        service_type: "standard",
+        description: "Delivered in 3 business days",
+        rate: 10.00, // BigCommerce expects a number, not cents
         currency: "CAD",
-        delivery_days: 3,
-        description: "Delivered in 3 business days"
+        transit_time: "3 business days"
+      },
+      {
+        carrier_id: "myrover",
+        carrier_name: "MyRover Carrier",
+        service_type: "express",
+        description: "Delivered in 1 business day",
+        rate: 25.00,
+        currency: "CAD",
+        transit_time: "1 business day"
       }
     ]
-  });
+  };
+
+  return res.status(200).json(rateResponse);
+});
+
+// ✅ Root route (optional)
+app.get("/", (req, res) => {
+  res.send("MyRover Carrier API is running ✅");
 });
 
 /* -------------------------------------------------------------------------- */
