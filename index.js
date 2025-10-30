@@ -80,7 +80,7 @@ app.post("/v1/shipping/connection", (req, res) => {
 /*  STEP 3️⃣ Get Shipping Rates Endpoint                                       */
 /* -------------------------------------------------------------------------- */
 //app.post("/v1/shipping/rates", async (req, res) => {
-app.post("/api/rates", async (req, res) => {
+app.post("/v1/shipping/rates", async (req, res) => {
   const { origin, destination } = req.body;
   console.log("📦 Rate request received:", { origin, destination });
 
