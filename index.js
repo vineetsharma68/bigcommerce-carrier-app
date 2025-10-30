@@ -69,21 +69,31 @@ app.get("/api/auth/callback", async (req, res) => {
 /*  STEP 2️⃣ BigCommerce Test Connection Endpoint                              */
 /* -------------------------------------------------------------------------- */
 // Handle both GET and POST for BigCommerce connection test
-app.all("/v1/shipping/connection", (req, res) => {
+app.post("/v1/shipping/connection", async (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
 
-  res.setHeader("Content-Type", "application/json");
-
-  res.status(200).json({
-    status: "OK",
-    messages: [
-      {
-        code: "SUCCESS",
-        message: "MyRover Carrier connected successfully"
-      }
-    ]
-  });
+  try {
+    // Here you could validate stored credentials, tokens, etc.
+    // For now, just respond with success:
+    res.status(200).json({
+      data: {
+        can_connect: true,
+        message: "Connection successful.",
+      },
+    });
+  } catch (error) {
+    console.error("Connection test failed:", error);
+    res.status(200).json({
+      data: {
+        can_connect: false,
+        message: "Connection failed: " + error.message,
+      },
+    });
+  }
 });
+
 
 
 
