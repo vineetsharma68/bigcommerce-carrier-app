@@ -68,16 +68,24 @@ app.get("/api/auth/callback", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 2️⃣ BigCommerce Test Connection Endpoint                              */
 /* -------------------------------------------------------------------------- */
-app.post("/v1/shipping/connection", (req, res) => {
+// Handle both GET and POST for BigCommerce connection test
+app.all("/v1/shipping/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
+  console.log("Method:", req.method);
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  return res.status(200).json({
-    success: true,
-    message: "MyRover Carrier connected successfully"
+  res.status(200).json({
+    status: "OK",
+    messages: [
+      {
+        code: "SUCCESS",
+        message: "MyRover Carrier connected successfully"
+      }
+    ]
   });
 });
+
 
 
 /*app.post("/v1/shipping/connection", (req, res) => {
