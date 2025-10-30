@@ -178,7 +178,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
-async function registerMetadata(storeHash, token) {
+/*async function registerMetadata(storeHash, token) {
   const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
 
   const payload = {
@@ -221,7 +221,7 @@ async function registerMetadata(storeHash, token) {
 
   console.log("✅ Metadata registered successfully:", data);
   return data;
-}
+}*/
 
 /* -------------------------------------------------------------------------- */
 /*  STEP 5️⃣ Debug Routes                                                      */
