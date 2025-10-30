@@ -179,15 +179,17 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
 async function registerCarrier(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/carrier`;
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection`;
 
   const payload = {
+    carrier_id: "myrover_carrier",
     name: "MyRover Carrier",
-    type: "carrier",
+    connection_url: "https://myrover-carrier.onrender.com/v1/shipping/connection",
     settings: {
-      carrier_url: "https://myrover-carrier.onrender.com/v1/shipping/rates",
+      capabilities: ["domestic", "international"],
+      supported_services: ["standard", "express"],
       developer_mode: true
-    },
+    }
   };
 
   console.log("🚚 Registering carrier service with BigCommerce:", JSON.stringify(payload, null, 2));
