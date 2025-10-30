@@ -71,9 +71,8 @@ app.get("/api/auth/callback", async (req, res) => {
 // Handle both GET and POST for BigCommerce connection test
 app.all("/v1/shipping/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
-  console.log("Method:", req.method);
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
+
+  res.setHeader("Content-Type", "application/json");
 
   res.status(200).json({
     status: "OK",
@@ -85,6 +84,7 @@ app.all("/v1/shipping/connection", (req, res) => {
     ]
   });
 });
+
 
 
 
@@ -102,7 +102,7 @@ app.all("/v1/shipping/connection", (req, res) => {
 /*  STEP 3️⃣ Get Shipping Rates Endpoint                                       */
 /* -------------------------------------------------------------------------- */
 //app.post("/v1/shipping/rates", async (req, res) => {
-app.post("/v1/shipping/rates", async (req, res) => {
+/*app.post("/v1/shipping/rates", async (req, res) => {
   const { origin, destination } = req.body;
   console.log("📦 Rate request received:", { origin, destination });
 
@@ -197,6 +197,22 @@ app.post("/v1/shipping/rates", async (req, res) => {
       ],
     });
   }
+});
+*/
+app.post("/v1/shipping/rates", (req, res) => {
+  console.log("📦 Shipping rates requested");
+  res.status(200).json({
+    rates: [
+      {
+        service_name: "Standard Shipping",
+        service_code: "standard",
+        total_price: 1000,
+        currency: "CAD",
+        delivery_days: 3,
+        description: "Delivered in 3 business days"
+      }
+    ]
+  });
 });
 
 /* -------------------------------------------------------------------------- */
