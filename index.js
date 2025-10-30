@@ -73,13 +73,12 @@ app.post("/v1/shipping/connection", (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  res.status(200).json({
-    data: {
-      status: "OK",
-      description: "MyRover Carrier connected successfully"
-    }
+  return res.status(200).json({
+    success: true,
+    message: "MyRover Carrier connected successfully"
   });
 });
+
 
 /*app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ /v1/shipping/connection HIT from BigCommerce");
