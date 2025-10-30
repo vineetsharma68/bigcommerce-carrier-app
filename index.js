@@ -79,99 +79,101 @@ app.post("/v1/shipping/connection", (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 3️⃣ Get Shipping Rates Endpoint                                       */
 /* -------------------------------------------------------------------------- */
-app.post("/v1/shipping/rates", async (req, res) => {
-  console.log("📦 /v1/shipping/rates HIT from BigCommerce");
-  const { origin, destination } = req.body || {};
+//app.post("/v1/shipping/rates", async (req, res) => {
+app.post("/api/rates", async (req, res) => {
+  const { origin, destination } = req.body;
+  console.log("📦 Rate request received:", { origin, destination });
+
+  if (!process.env.MYROVER_API_KEY) {
+    console.warn("⚠️ MYROVER_API_KEY not set — returning dummy rates.");
+    return res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
+      ],
+    });
+  }
 
   try {
-    // ✅ If MyRover API key not set, return dummy rates for testing
-    if (!MYROVER_API_KEY) {
-      console.warn("⚠️ MYROVER_API_KEY not set — returning test rates.");
-      return res.status(200).json({
-        data: [
-          {
-            carrier_name: "MyRover Express",
-            rate_name: "MyRover Standard",
-            cost: 10.5,
-            currency: "CAD",
-          },
-          {
-            carrier_name: "MyRover Express",
-            rate_name: "MyRover Express (1-Day)",
-            cost: 25.0,
-            currency: "CAD",
-          },
-        ],
-      });
-    }
-
-    // ✅ Get available MyRover services
+    // STEP 1: Fetch all available services
     const serviceRes = await axios.post(
       "https://apis.myrover.io/GetServices",
       {},
       {
         headers: {
-          Authorization: MYROVER_API_KEY,
+          "Authorization": process.env.MYROVER_API_KEY,
           "Content-Type": "application/json",
         },
       }
     );
 
     const services = serviceRes.data?.services || [];
-    console.log(`🧾 Found ${services.length} services from MyRover`);
+    console.log(`🧾 Found ${services.length} services`);
 
-    if (services.length === 0) throw new Error("No services found");
+    if (services.length === 0) throw new Error("No active services found");
 
-    // ✅ Fetch prices in parallel
-    const ratePromises = services.map(async (service) => {
-      try {
-        const priceRes = await axios.post(
+    // STEP 2: Prepare parallel requests for GetPrice
+    const promises = services.map((service) =>
+      axios
+        .post(
           "https://apis.myrover.io/GetPrice",
           {
             service_id: service.id,
-            pickup_address: origin?.postal_code,
-            drop_address: destination?.postal_code,
+            email: "test@example.com",
+            priority_id: 1,
+            pickup_address: origin.postal_code,
+            drop_address: destination.postal_code,
           },
           {
             headers: {
-              Authorization: MYROVER_API_KEY,
+              "Authorization": process.env.MYROVER_API_KEY,
               "Content-Type": "application/json",
             },
           }
-        );
-
-        const cost = priceRes.data?.data?.cost || 0;
-        if (cost > 0) {
+        )
+        .then((priceRes) => {
+          const cost = priceRes.data?.data?.cost || 0;
           console.log(`✅ ${service.name}: ₹${cost}`);
-          return {
-            carrier_name: "MyRover Express",
-            rate_name: service.name,
-            cost,
-            currency: "CAD",
-          };
-        }
-      } catch (err) {
-        console.warn(`⚠️ ${service.name} failed:`, err.response?.data || err.message);
-      }
-      return null;
-    });
+          if (cost > 0) {
+            return {
+              carrier_quote: {
+                code: service.abbreviation || `srv-${service.id}`,
+                display_name: service.name,
+                cost,
+              },
+            };
+          }
+          return null;
+        })
+        .catch((err) => {
+          console.warn(`⚠️ ${service.name} failed:`, err.response?.data || err.message);
+          return null;
+        })
+    );
 
-    const results = (await Promise.all(ratePromises)).filter(Boolean);
+    // STEP 3: Run all GetPrice requests in parallel
+    const results = await Promise.all(promises);
+    const validRates = results.filter((r) => r !== null);
 
-    if (results.length === 0) {
-      console.warn("⚠️ No valid MyRover rates, using fallback.");
-      return res.status(200).json({
+    if (validRates.length === 0) {
+      console.warn("⚠️ No valid rates returned from MyRover, using fallback.");
+      return res.json({
         data: [
-          { carrier_name: "MyRover Express", rate_name: "Standard", cost: 10.5, currency: "CAD" },
-          { carrier_name: "MyRover Express", rate_name: "Express", cost: 25.0, currency: "CAD" },
+          { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+          { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
         ],
       });
     }
 
-    res.status(200).json({ data: results });
+    res.json({ data: validRates });
   } catch (err) {
-    console.error("❌ Error in /v1/shipping/rates:", err.message);
-    res.status(500).json({ error: "Failed to get MyRover rates" });
+    console.error("❌ MyRover API error:", err.response?.data || err.message);
+    res.json({
+      data: [
+        { carrier_quote: { code: "standard", display_name: "Standard Shipping", cost: 10.5 } },
+        { carrier_quote: { code: "express", display_name: "Express Shipping", cost: 25.0 } },
+      ],
+    });
   }
 });
 
