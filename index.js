@@ -55,7 +55,7 @@ app.get("/api/auth/callback", async (req, res) => {
     storeTokens.set(storeHash, token);
 
     console.log(`✅ Access token stored for store: ${storeHash}`);
-    //await registerMetadata(storeHash, token);
+    await registerMetadata(storeHash, token);
 
     res.send(`<h2>✅ MyRover Installed Successfully!</h2>
               <p>Store: ${storeHash}</p>`);
@@ -178,7 +178,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
-/*async function registerMetadata(storeHash, token) {
+async function registerMetadata(storeHash, token) {
   const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
 
   const payload = {
@@ -221,7 +221,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
 
   console.log("✅ Metadata registered successfully:", data);
   return data;
-}*/
+}
 
 /* -------------------------------------------------------------------------- */
 /*  STEP 5️⃣ Debug Routes                                                      */
