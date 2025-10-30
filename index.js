@@ -262,6 +262,17 @@ app.post("/api/uninstall", (req, res) => {
   res.status(200).json({ success: true });
 });
 
+
+
+
+app.get("/debug/test", (req, res) => {
+  const storeHash = req.query.store;
+  const token = storeTokens.get(storeHash);
+  if (!token) return res.json({ error: "No token for this store" });
+  res.json({ success: true, store: storeHash, token });
+});
+
+
 app.listen(PORT, () => {
   console.log(`🚀 MyRover Carrier running on port ${PORT}`);
 });
