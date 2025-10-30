@@ -55,11 +55,7 @@ app.get("/api/auth/callback", async (req, res) => {
     storeTokens.set(storeHash, token);
 
     console.log(`✅ Access token stored for store: ${storeHash}`);
-    //await registerMetadata(storeHash, token);
-
-// Register hook for automatic shipping quote callbacks
-await registerShippingHook(storeHash, token);
-
+    
     await registerMetadata(storeHash, token);
     res.send(`<h2>✅ MyRover Installed Successfully!</h2>
               <p>Store: ${storeHash}</p>`);
@@ -285,39 +281,6 @@ app.get("/debug/test", (req, res) => {
   res.json({ success: true, store: storeHash, token });
 });
 
-
-// 🪝 Register Shipping Rate Hook with BigCommerce
-async function registerShippingHook(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v2/hooks`;
-
-  const payload = {
-    scope: "store/shipping/rate/quote",
-    destination: "https://myrover-carrier.onrender.com/v1/shipping/rates",
-    is_active: true,
-  };
-
-  console.log("📦 Registering shipping quote hook:", JSON.stringify(payload, null, 2));
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "X-Auth-Token": token,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    console.error(`❌ Hook registration failed: ${response.status}`, data);
-  } else {
-    console.log("✅ Hook registered successfully:", data);
-  }
-
-  return data;
-}
 
 
 
