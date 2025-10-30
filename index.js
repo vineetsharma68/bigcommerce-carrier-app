@@ -56,7 +56,7 @@ app.get("/api/auth/callback", async (req, res) => {
 
     console.log(`✅ Access token stored for store: ${storeHash}`);
     
-    await registerMetadata(storeHash, token);
+    //await registerMetadata(storeHash, token);
     res.send(`<h2>✅ MyRover Installed Successfully!</h2>
               <p>Store: ${storeHash}</p>`);
   } catch (err) {
@@ -74,13 +74,25 @@ app.post("/v1/shipping/connection", async (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  res.status(200).json({
-    data: {
-      can_connect: true,
-      message: "Connection successful."
-    }
-  });
+  try {
+    // ✅ Respond in the format BigCommerce expects
+    return res.status(200).json({
+      data: {
+        can_connect: true,
+        message: "Connection successful."
+      }
+    });
+  } catch (err) {
+    console.error("❌ Connection error:", err);
+    return res.status(500).json({
+      data: {
+        can_connect: false,
+        message: "Internal error"
+      }
+    });
+  }
 });
+
 
 
 
