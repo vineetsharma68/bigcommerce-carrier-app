@@ -55,7 +55,7 @@ app.get("/api/auth/callback", async (req, res) => {
     storeTokens.set(storeHash, token);
 
     console.log(`✅ Access token stored for store: ${storeHash}`);
-    await registerMetadata(storeHash, token);
+    //await registerMetadata(storeHash, token);
 
     res.send(`<h2>✅ MyRover Installed Successfully!</h2>
               <p>Store: ${storeHash}</p>`);
