@@ -55,8 +55,8 @@ app.get("/api/auth/callback", async (req, res) => {
     storeTokens.set(storeHash, token);
 
     console.log(`✅ Access token stored for store: ${storeHash}`);
-    await registerMetadata(storeHash, token);
-
+    //await registerMetadata(storeHash, token);
+    await registerCarrier(storeHash, token);
     res.send(`<h2>✅ MyRover Installed Successfully!</h2>
               <p>Store: ${storeHash}</p>`);
   } catch (err) {
@@ -178,29 +178,19 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
-async function registerMetadata(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/app/metadata`;
+async function registerCarrier(storeHash, token) {
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v2/shipping/carrier`;
 
   const payload = {
-    meta: {
-      version: "1.0",
-      documentation: "https://myrover.io/docs/carrier-api",
+    name: "MyRover Carrier",
+    type: "carrier",
+    settings: {
+      carrier_url: "https://myrover-carrier.onrender.com/v1/shipping/rates",
+      developer_mode: true
     },
-    data: [
-      {
-        key: "shipping_connection",
-        value: "/v1/shipping/connection",
-        description: "Test endpoint to verify MyRover connection",
-      },
-      {
-        key: "shipping_rates",
-        value: "/v1/shipping/rates",
-        description: "Retrieve live shipping rates from MyRover API",
-      },
-    ],
   };
 
-  console.log("📦 Registering metadata with BigCommerce:", JSON.stringify(payload, null, 2));
+  console.log("🚚 Registering carrier service with BigCommerce:", JSON.stringify(payload, null, 2));
 
   const response = await fetch(url, {
     method: "POST",
@@ -215,11 +205,11 @@ async function registerMetadata(storeHash, token) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    console.error(`❌ Metadata registration failed: ${response.status}`, data);
+    console.error(`❌ Carrier registration failed: ${response.status}`, data);
     return data;
   }
 
-  console.log("✅ Metadata registered successfully:", data);
+  console.log("✅ Carrier registered successfully:", data);
   return data;
 }
 
