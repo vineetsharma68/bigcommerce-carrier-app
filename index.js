@@ -74,22 +74,21 @@ app.post("/v1/shipping/connection", (req, res) => {
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  res
-    .status(200)
-    .set("Content-Type", "application/json")
-    .json({
-      data: {
-        status: "OK",
-        message: "MyRover Carrier connected successfully",
-        timestamp: new Date().toISOString(),
-      },
-      meta: {
-        carrier: "MyRover Carrier",
-        version: "1.0.0",
-      },
-    });
-});
+  const responseBody = {
+    data: {
+      success: true,
+      message: "MyRover Carrier connection successful",
+      carrier_name: "MyRover Carrier",
+    },
+  };
 
+  console.log("🔁 Sending response:", responseBody);
+
+  res.status(200)
+    .set("Content-Type", "application/json; charset=utf-8")
+    .set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+    .json(responseBody);
+});
 
 
 
