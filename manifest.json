@@ -1,0 +1,41 @@
+{
+  "name": "MyRover Carrier",
+  "description": "Get live delivery quotes from MyRover Express directly in BigCommerce checkout.",
+  "auth": {
+    "client_id": "YOUR_CLIENT_ID",
+    "scope": "store_v2_information store_v2_shipping",
+    "redirect_urls": [
+      "https://myrover-carrier.onrender.com/api/auth/callback"
+    ]
+  },
+  "load": {
+    "url": "https://myrover-carrier.onrender.com/api/load"
+  },
+  "uninstall": {
+    "url": "https://myrover-carrier.onrender.com/api/uninstall"
+  },
+  "callbacks": {
+    "oauth2": {
+      "url": "https://myrover-carrier.onrender.com/api/auth/callback"
+    }
+  },
+  "extensions": [
+    {
+      "name": "MyRover Carrier Extension",
+      "type": "shipping_carrier",
+      "description": "Real-time shipping quotes powered by MyRover.io",
+      "settings": {
+        "connection_url": "https://myrover-carrier.onrender.com/v1/shipping/connection",
+        "shipping_rates_url": "https://myrover-carrier.onrender.com/v1/shipping/rates",
+        "is_test_mode": false
+      }
+    }
+  ],
+  "version": "1.0.1",
+  "icon": "https://myrover.io/assets/icon.png",
+  "website": "https://myrover.io",
+  "support": {
+    "email": "support@myrover.io",
+    "url": "https://myrover.io/support"
+  }
+}
