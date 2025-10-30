@@ -70,7 +70,7 @@ app.get("/api/auth/callback", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 // Handle both GET and POST for BigCommerce connection test
 
-app.post("/shipping/v1/connection", (req, res) => {
+/*app.post("/shipping/v1/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
@@ -84,9 +84,9 @@ app.post("/shipping/v1/connection", (req, res) => {
     }
   });
 });
+*/
 
-
-/*app.post("/v1/shipping/connection", (req, res) => {
+app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
@@ -112,7 +112,7 @@ app.post("/shipping/v1/connection", (req, res) => {
 });
 
 
-*/
+
 
 
 
