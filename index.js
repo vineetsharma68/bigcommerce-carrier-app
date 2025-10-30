@@ -179,7 +179,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
 /*  STEP 4️⃣ Register Metadata with BigCommerce                                */
 /* -------------------------------------------------------------------------- */
 async function registerCarrier(storeHash, token) {
-  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection/521`;
+  const url = `https://api.bigcommerce.com/stores/${storeHash}/v3/carrier/connection/530`;
 
   const payload = {
     name: "MyRover Carrier",
