@@ -69,12 +69,13 @@ app.get("/api/auth/callback", async (req, res) => {
 /*  STEP 2️⃣ BigCommerce Test Connection Endpoint                              */
 /* -------------------------------------------------------------------------- */
 // Handle both GET and POST for BigCommerce connection test
-app.post("/shipping/v1/connection", async (req, res) => {
+
+app.post("/shipping/v1/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
-  return res.status(200).json({
+  res.status(200).json({
     data: {
       account: {
         status: "connected",
@@ -83,6 +84,7 @@ app.post("/shipping/v1/connection", async (req, res) => {
     }
   });
 });
+
 
 /*app.post("/v1/shipping/connection", (req, res) => {
   console.log("✅ Connection HIT from BigCommerce");
