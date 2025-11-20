@@ -20,13 +20,13 @@ const storeTokens = new Map();
 /* -------------------------------------------------------------------------- */
 /*  STEP 1️⃣ OAuth Installation Flow                                           */
 /* -------------------------------------------------------------------------- */
-app.get("/api/install", (req, res) => {
+app.get("/install", (req, res) => {
   const { context, scope } = req.query;
   const redirect = `https://login.bigcommerce.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=${scope}&redirect_uri=${APP_URL}/api/auth/callback&response_type=code&context=${context}`;
   res.redirect(redirect);
 });
 
-app.get("/api/auth/callback", async (req, res) => {
+app.get("/oauth", async (req, res) => {
   try {
     const { code, context, scope } = req.query;
     if (!code || !context) throw new Error("Missing code or context");
@@ -40,7 +40,7 @@ app.get("/api/auth/callback", async (req, res) => {
       body: JSON.stringify({
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
-        redirect_uri: `${APP_URL}/api/auth/callback`,
+        redirect_uri: `${APP_URL}/oauth`,
         grant_type: "authorization_code",
         code,
         scope,
@@ -326,7 +326,7 @@ app.get("/", (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 7 App load (inside BigCommerce admin UI)                                   */
 /* -------------------------------------------------------------------------- */
-app.get("/api/load", (req, res) => {
+app.get("/load", (req, res) => {
   res.send(`
     <html>
       <body style="font-family: Arial; text-align:center; margin-top:50px;">
@@ -342,7 +342,7 @@ app.get("/api/load", (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*  STEP 8 🔹 Uninstall endpoint (optional cleanup)                                  */
 /* -------------------------------------------------------------------------- */
-app.post("/api/uninstall", (req, res) => {
+app.post("/uninstall", (req, res) => {
   const storeHash = req.body.store_hash;
   storeTokens.delete(storeHash);
   console.log(`🗑️ Uninstalled from ${storeHash}`);
