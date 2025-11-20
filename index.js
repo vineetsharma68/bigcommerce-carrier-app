@@ -20,11 +20,23 @@ const storeTokens = new Map();
 /* -------------------------------------------------------------------------- */
 /*  STEP 1️⃣ OAuth Installation Flow                                           */
 /* -------------------------------------------------------------------------- */
-app.get("/api/install", (req, res) => {
+/*app.get("/api/install", (req, res) => {
   const { context, scope } = req.query;
   const redirect = `https://login.bigcommerce.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=${scope}&redirect_uri=${APP_URL}/api/auth/callback&response_type=code&context=${context}`;
   res.redirect(redirect);
+});*/
+app.get("/api/install", (req, res) => {
+  const { context, scope } = req.query;
+
+  const authUrl = `https://login.bigcommerce.com/oauth2/authorize?client_id=${CLIENT_ID}`
+    + `&scope=${encodeURIComponent(scope)}`
+    + `&redirect_uri=${encodeURIComponent(APP_URL + "/api/auth/callback")}`
+    + `&response_type=code`
+    + `&context=${encodeURIComponent(context)}`;
+
+  res.redirect(authUrl);
 });
+
 
 app.get("/api/auth/callback", async (req, res) => {
   try {
