@@ -8,8 +8,8 @@ const app = express();
 app.use(express.json());
 
 // 🔑 Environment Variables
-const CLIENT_ID = process.env.BC_CLIENT_ID;
-const CLIENT_SECRET = process.env.BC_CLIENT_SECRET;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const APP_URL = process.env.APP_URL; // e.g. https://myrover-carrier.onrender.com
 const MYROVER_API_KEY = process.env.MYROVER_API_KEY;
 const PORT = process.env.PORT || 3000;
