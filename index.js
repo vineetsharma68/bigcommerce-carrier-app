@@ -17,6 +17,16 @@ const PORT = process.env.PORT || 3000;
 // 🧠 Temporary Token Store
 const storeTokens = new Map();
 
+
+// 🔐 Step 1: Installation URL (OAuth Initiation)
+app.get("/api/install", (req, res) => {
+  const { context, scope } = req.query;
+  const redirect = `https://login.bigcommerce.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=${scope}&redirect_uri=${APP_URL}/api/auth/callback&response_type=code&context=${context}`;
+  res.redirect(redirect);
+});
+
+
+
 /* ===========================================================================
    1️⃣ OAuth Callback (Shipping Provider Install triggers THIS)
 =========================================================================== */
