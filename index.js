@@ -152,7 +152,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
       {},
       {
         headers: {
-          "Authorization": process.env.MYROVER_API_KEY,
+          "x-api-key": process.env.MYROVER_API_KEY,
           "Content-Type": "application/json",
         },
       }
@@ -177,7 +177,7 @@ app.post("/v1/shipping/rates", async (req, res) => {
           },
           {
             headers: {
-              "Authorization": process.env.MYROVER_API_KEY,
+              "x-api-key": process.env.MYROVER_API_KEY,
               "Content-Type": "application/json",
             },
           }
